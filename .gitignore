@@ -55,3 +55,9 @@ cmake_install.cmake
 
 # git orig files
 *.orig
+
+# image files 
+*.png
+*.jpg
+*.eps
+*.pdf
