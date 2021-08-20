@@ -42,6 +42,22 @@ def io_open_env_var(file_name_raw, rw_flags="r"):
   return fh
 
 # -----------------------------------------------------------------------------
+def find_center_circumference_from_two_points_and_radius(\
+    point_P, point_Q, radius):
+  x1 = point_P[0]
+  y1 = point_P[1]
+  x2 = point_Q[0]
+  y2 = point_Q[1]
+  radsq = radius * radius;
+  q = np.sqrt(((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1)));
+  x3 = (x1 + x2) / 2;
+  y3 = (y1 + y2) / 2;
+  return np.array(\
+    [x3 + np.sqrt(radsq - ((q / 2) * (q / 2))) * ((y1 - y2) / q),
+     y3 + np.sqrt(radsq - ((q / 2) * (q / 2))) * ((x2 - x1) / q),
+     0.0])
+
+# -----------------------------------------------------------------------------
 def main(argv=None):
 
   if argv is None:
@@ -106,16 +122,21 @@ def main(argv=None):
   # Execute code --------------------------------------------------------------
 
   print("Options", mesh_options)
+  radius_BC = mesh_options["geometry"]["radius_BC"]
+  radius_CD = mesh_options["geometry"]["radius_CD"]
+  angle_BD  = mesh_options["geometry"]["angle_BD"]
+  #angle_CD  = mesh_options["geometry"]["angle_CD"]
   point_A = np.array(mesh_options["geometry"]["origin"])
+  length_BC_h = mesh_options["geometry"]["length_BC_h"]
+  length_BC_v = mesh_options["geometry"]["length_BC_v"]
+  length_BD_h = mesh_options["geometry"]["length_BD_h"]
+  length_BD_v = mesh_options["geometry"]["length_BD_v"]
   point_B_prime = point_A + [mesh_options["geometry"]["length_AB"], 0,0]
-  point_C1_prime = point_B_prime + [-mesh_options["geometry"]["length_BC_h"], \
-                     mesh_options["geometry"]["length_BC_v"] ,0]
-  point_C2_prime = point_B_prime + [-mesh_options["geometry"]["length_BC_h"], \
-                     - mesh_options["geometry"]["length_BC_v"] ,0]
-  point_D1_prime = point_B_prime + [-mesh_options["geometry"]["length_BD_h"], \
-                     mesh_options["geometry"]["length_BD_v"] ,0]
-  point_D2_prime = point_B_prime + [-mesh_options["geometry"]["length_BD_h"], \
-                     - mesh_options["geometry"]["length_BD_v"] ,0]
+  point_C1_prime = point_B_prime + [-length_BC_h,  length_BC_v ,0]
+  print("point_C1_prime", point_C1_prime)
+  point_C2_prime = point_B_prime + [-length_BC_h, -length_BC_v, 0]
+  point_D1_prime = point_B_prime + [-length_BD_h,  length_BD_v, 0]
+  point_D2_prime = point_B_prime + [-length_BD_h, -length_BD_v, 0]
   point_E1_prime = point_A + [0, mesh_options["geometry"]["length_AE"],0]
   point_E2_prime = point_A + [0, -mesh_options["geometry"]["length_AE"],0]
 
@@ -127,61 +148,151 @@ def main(argv=None):
   point_D2 = np.zeros([3])
   point_E1 = np.zeros([3])
   point_E2 = np.zeros([3])
-  point_B[0] = point_B_prime[0]*np.cos(alpha) - \
-                 point_B_prime[1]*np.sin(alpha)
-  point_B[1] = point_B_prime[0]*np.sin(alpha) + \
-                 point_B_prime[1]*np.cos(alpha)
+  point_B[0]  = point_B_prime[0]*np.cos(alpha) - \
+                point_B_prime[1]*np.sin(alpha)
+  point_B[1]  = point_B_prime[0]*np.sin(alpha) + \
+                point_B_prime[1]*np.cos(alpha)
+  print("point_B", point_B, "vs", point_B_prime)
   point_C1[0] = point_C1_prime[0]*np.cos(alpha) - \
-                 point_C1_prime[1]*np.sin(alpha)
+                point_C1_prime[1]*np.sin(alpha)
   point_C1[1] = point_C1_prime[0]*np.sin(alpha) + \
-                 point_C1_prime[1]*np.cos(alpha)
+                point_C1_prime[1]*np.cos(alpha)
   point_C2[0] = point_C2_prime[0]*np.cos(alpha) - \
-                 point_C2_prime[1]*np.sin(alpha)
+                point_C2_prime[1]*np.sin(alpha)
   point_C2[1] = point_C2_prime[0]*np.sin(alpha) + \
-                 point_C2_prime[1]*np.cos(alpha)
+                point_C2_prime[1]*np.cos(alpha)
   point_D1[0] = point_D1_prime[0]*np.cos(alpha) - \
-                 point_D1_prime[1]*np.sin(alpha)
+                point_D1_prime[1]*np.sin(alpha)
   point_D1[1] = point_D1_prime[0]*np.sin(alpha) + \
-                 point_D1_prime[1]*np.cos(alpha)
+                point_D1_prime[1]*np.cos(alpha)
   point_D2[0] = point_D2_prime[0]*np.cos(alpha) - \
-                 point_D2_prime[1]*np.sin(alpha)
+                point_D2_prime[1]*np.sin(alpha)
   point_D2[1] = point_D2_prime[0]*np.sin(alpha) + \
-                 point_D2_prime[1]*np.cos(alpha)
+                point_D2_prime[1]*np.cos(alpha)
   point_E1[0] = point_E1_prime[0]*np.cos(alpha) - \
-                 point_E1_prime[1]*np.sin(alpha)
+                point_E1_prime[1]*np.sin(alpha)
   point_E1[1] = point_E1_prime[0]*np.sin(alpha) + \
-                 point_E1_prime[1]*np.cos(alpha)
+                point_E1_prime[1]*np.cos(alpha)
   point_E2[0] = point_E2_prime[0]*np.cos(alpha) - \
-                 point_E2_prime[1]*np.sin(alpha)
+                point_E2_prime[1]*np.sin(alpha)
   point_E2[1] = point_E2_prime[0]*np.sin(alpha) + \
-                 point_E2_prime[1]*np.cos(alpha)
+                point_E2_prime[1]*np.cos(alpha)
 
- # creating dictionary of all the  8 points to store all the point in a sequence
-#  probe_points = {"p1" : point_A, "p2": point_E1, "p3": point_D1, \
-#                   "p4": point_C1, "p5": point_B, "p6": point_C2, \
-#                     "p7": point_D2, "p8": point_E2} 
+  # arc BC
+  number_of_points_BC = mesh_options["geometry"]["number_of_points_BC"]
+  angle_BC = np.arctan(point_C1[1]/(radius_BC - length_BC_h))
+  print("DEBUG point_C1[1]", point_C1[1], "length_BC_h", length_BC_h)
+  origin_BC = point_B - np.array([radius_BC,0.0,0.0])
+  print("DEBUG point_C1_test_x",
+        origin_BC + np.cos(angle_BC), "vs", point_C1[0])
+  # Due to a small mismatch between:
+  #  + point_C2 and the beginning of the arc C2-C1
+  #  + point_C1 and the end of the arc C2-C1
+  # we construct the arc without those beginning and end points and we append
+  # the actual C2 and C1 points instead
+  # C2-B
+  points_C2_C1 = [point_C2]
+  for idx in range(number_of_points_BC):
+    beta_BQ = - angle_BC * (number_of_points_BC - idx - 1) / (number_of_points_BC)
+    point_Q = origin_BC + \
+              radius_BC * np.array([np.cos(beta_BQ), np.sin(beta_BQ), 0.0])
+    print("beta_BQ", beta_BQ, "point_Q", point_Q, "radius_BC", radius_BC,
+          "angle_BC", angle_BC)
+    points_C2_C1.append(point_Q)
+  # B-C1
+  for idx in range(number_of_points_BC):
+    beta_BQ = angle_BC * idx / number_of_points_BC
+    point_Q = origin_BC + \
+              radius_BC * np.array([np.cos(beta_BQ), np.sin(beta_BQ), 0.0])
+    print("beta_BQ", beta_BQ, "point_Q", point_Q, "radius_BC", radius_BC,
+          "angle_BC", angle_BC)
+    points_C2_C1.append(point_Q)
+  points_C2_C1.append(point_C1)
 
-  num_control_point = 8
-  num_dim = 3
-  probe_points = np.zeros([num_control_point, num_dim])
-  probe_points[0,:] = point_A
-  probe_points[1,:] = point_E1
-  probe_points[2,:] = point_D1
-  probe_points[3,:] = point_C1
-  probe_points[4,:] = point_B
-  probe_points[5,:] = point_C2
-  probe_points[6,:] = point_D2
-  probe_points[7,:] = point_E2
+  # arc C1-D1
+  center_CD = find_center_circumference_from_two_points_and_radius(\
+    point_C1, point_D1, radius_CD)
+  print("center_CD", center_CD)
+  number_of_points_CD = mesh_options["geometry"]["number_of_points_CD"]
+  angle_center_CD_C1 = \
+    np.arctan2((point_C1[1]-center_CD[1]), (point_C1[0]-center_CD[0]))
+  angle_center_CD_D1 = \
+    np.arctan2((point_D1[1]-center_CD[1]), (point_D1[0]-center_CD[0]) )
+  angle_CD = angle_center_CD_D1 - angle_center_CD_C1
+  print("(point_C1[0]-center_CD[0])", (point_C1[0]-center_CD[0]))
+  print("(point_C1[1]-center_CD[1])", (point_C1[1]-center_CD[1]))
+  print("(point_D1[0]-center_CD[0])", (point_D1[0]-center_CD[0]))
+  print("(point_D1[1]-center_CD[1])", (point_D1[1]-center_CD[1]))
+  print("angle_center_CD_C1", np.rad2deg(angle_center_CD_C1))
+  print("angle_center_CD_D1", np.rad2deg(angle_center_CD_D1))
+  print("angle_CD", np.rad2deg(angle_CD))
+  points_C1_D1 = []
+  for idx in range(number_of_points_CD):
+    beta_BQ = angle_center_CD_C1 + \
+              angle_CD * idx / (number_of_points_CD-1)
+    point_Q = center_CD + \
+              radius_CD * np.array([np.cos(beta_BQ), np.sin(beta_BQ), 0.0])
+    print("beta_BQ", np.rad2deg(beta_BQ))
+    points_C1_D1.append(point_Q)
+  points_C1_D1.append(center_CD)
+
+  print("point_C1", point_C1, "vs", point_C1_prime, "vs", points_C2_C1[-1])
+  print("point_C2", point_C2, "vs", points_C2_C1[0])
+  # creating dictionary of all the  8 points to store all the point in a sequence
+  #  probe_points = {"p1" : point_A, "p2": point_E1, "p3": point_D1, \
+  #                   "p4": point_C1, "p5": point_B, "p6": point_C2, \
+  #                     "p7": point_D2, "p8": point_E2} 
+
+  probe_points = []
+  probe_points.append(point_A)
+  probe_points.append(point_E1)
+  probe_points.append(point_D1)
+  probe_points.append(point_C1)
+  probe_points.append(point_B)
+  probe_points.append(point_C2)
+  probe_points.append(point_D2)
+  probe_points.append(point_E2)
  
   # Write output file
-  file = open("orion_geometry.txt", "w")
-  file.write("blobk"+ "  "+ "pintID"+ "  "+ "x" +"  "+ "y" + "  "+ "z"+ "\n")
-  for i_point in range(num_control_point):
-      file.write(str(1) + "  " + str(i_point+1) + "  " +
-                  str(probe_points[i_point, 0])+ "  " + \
-                   str(probe_points[i_point, 1])+ "  " + \
-                     str(probe_points[i_point,2])+ "\n")
+  file = open(mesh_options["output"]["point_file"], "w")
+  file.write("block"+ "  "+ "pointID"+ "  "+ "x" +"  "+ "y" + "  "+ "z"+ "\n")
+  for pdx, point in enumerate(probe_points):
+      file.write(str(1) + "  " + str(pdx+1) + "  " +
+                 str(point[0])+ "  " + \
+                 str(point[1])+ "  " + \
+                 str(point[2])+ "\n")
+  file.close()
 
+  print("DEBUG points_C2_C1", points_C2_C1)
+  file = open(mesh_options["output"]["arc_BC1_file"], "w")
+  file.write("block"+ "  "+ "pointID"+ "  "+ "x" +"  "+ "y" + "  "+ "z"+ "\n")
+  for pdx, point in enumerate(points_C2_C1):
+      file.write(str(1) + "  " + str(pdx+1) + "  " +
+                 str(point[0])+ "  " + \
+                 str(point[1])+ "  " + \
+                 str(point[2])+ "\n")
+  file.close()
+
+  file = open(mesh_options["output"]["arc_CD1_file"], "w")
+  file.write("block"+ "  "+ "pointID"+ "  "+ "x" +"  "+ "y" + "  "+ "z"+ "\n")
+  for pdx, point in enumerate(points_C1_D1):
+      file.write(str(1) + "  " + str(pdx+1) + "  " +
+                 str(point[0])+ "  " + \
+                 str(point[1])+ "  " + \
+                 str(point[2])+ "\n")
+  file.close()
+
+  
+  # Data for plotting
+  #output_filename_plot = mesh_options["output"]["plot_file"]
+  #fig, ax = plt.subplots()
+  #ax.plot(probe_points)
+  #ax.set(xlabel='x', ylabel='y',
+  #       title='Title')
+  #ax.grid()
+  #fig.savefig(output_filename_plot)
+  #plt.show()
+  
 
 #------------------------------------------------------------------------------
 if __name__ == "__main__":
