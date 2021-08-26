@@ -197,7 +197,8 @@ def pod_rom_matrices_2d(xi_index, eta_index, zeta_index, cell_center,
 
 # -----------------------------------------------------------------------------
 def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
-             num_cell, phi, weights, velocity_0_3d, jacobian, accuracy):
+             num_cell, phi, weights, velocity_0_3d, jacobian,
+               accuracy_x, accuracy_y, accuracy_z):
 
   dim = velocity_0_3d.shape
   num_xi   = dim[0]
@@ -241,7 +242,9 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
       zeta_index,
       num_cell,
       jacobian,
-      accuracy)
+      accuracy_x,
+      accuracy_y,
+      accuracy_z)
 
   dvel_dx_3D = np.zeros([num_xi, num_eta, num_zeta, num_dim])
   dvel_dy_3D = np.zeros([num_xi, num_eta, num_zeta, num_dim])
@@ -256,11 +259,14 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
       (xi_index, eta_index, zeta_index, num_cell, dvel_dz_1D[:, i_dim])
 
   (ddvel_dx2_1D, nul, nul) = curvder.derivative_3d \
-    (dvel_dx_3D, xi_index, eta_index, zeta_index, num_cell, jacobian, accuracy)
+    (dvel_dx_3D, xi_index, eta_index, zeta_index, num_cell, jacobian,\
+      accuracy_x, accuracy_y, accuracy_z)
   (nul, ddvel_dy2_1D, nul) = curvder.derivative_3d \
-    (dvel_dy_3D, xi_index, eta_index, zeta_index, num_cell, jacobian, accuracy)
+    (dvel_dy_3D, xi_index, eta_index, zeta_index, num_cell, jacobian,\
+      accuracy_x, accuracy_y, accuracy_z)
   (nul, nul, ddvel_dz2_1D) = curvder.derivative_3d \
-    (dvel_dz_3D, xi_index, eta_index, zeta_index, num_cell, jacobian, accuracy)
+    (dvel_dz_3D, xi_index, eta_index, zeta_index, num_cell, jacobian,\
+      accuracy_x, accuracy_y, accuracy_z)
 
   print('Reconstructing derivative of velocity')
   dvel_dx_1D = np.reshape(dvel_dx_1D.transpose(), (num_cell * num_dim))
@@ -312,7 +318,8 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
 
   print('Calculating derivative of phi')
   (dphidx_1D, dphidy_1D, dphidz_1D) = curvder.derivative_3d \
-    (phi_3D, xi_index, eta_index, zeta_index, num_cell, jacobian, accuracy)
+    (phi_3D, xi_index, eta_index, zeta_index, num_cell, jacobian,\
+       accuracy_x, accuracy_y, accuracy_z)
   for i_dof in range(num_dof):
     dphidx_3D[:,:,:,i_dof] = arr_conv.array_1D_to_3D \
       (xi_index, eta_index, zeta_index, num_cell, dphidx_1D[:,i_dof])
@@ -322,11 +329,14 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
       (xi_index, eta_index, zeta_index, num_cell, dphidz_1D[:, i_dof])
 
   (ddphidx2_1D, nul, nul) = curvder.derivative_3d \
-    (dphidx_3D, xi_index, eta_index, zeta_index, num_cell, jacobian, accuracy)
+    (dphidx_3D, xi_index, eta_index, zeta_index, num_cell, jacobian,\
+       accuracy_x, accuracy_y, accuracy_z)
   (nul, ddphidy2_1D, nul) = curvder.derivative_3d \
-    (dphidy_3D, xi_index, eta_index, zeta_index, num_cell, jacobian, accuracy)
+    (dphidy_3D, xi_index, eta_index, zeta_index, num_cell, jacobian,\
+      accuracy_x, accuracy_y, accuracy_z)
   (nul, nul, ddphidz2_1D) = curvder.derivative_3d \
-    (dphidz_3D, xi_index, eta_index, zeta_index, num_cell, jacobian, accuracy)
+    (dphidz_3D, xi_index, eta_index, zeta_index, num_cell, jacobian,\
+       accuracy_x, accuracy_y, accuracy_z)
 
   print('Reconstructing derivative of phi')
   dphi_dx_1D = np.reshape(dphidx_1D, (num_cell, num_dim, num_snapshots))
@@ -417,6 +427,8 @@ def rom_calc_rk45(Re, char_L, L0, LRe, C0, CRe, Q, modal_coef, t_eval):
 
   from scipy import integrate
   t_span = (t_eval[0], t_eval[len(t_eval)-1])
+  print("t_span", t_span)
+  print("t_eval", t_eval)
   sol = \
     integrate.solve_ivp(\
       lambda t,
@@ -429,17 +441,19 @@ def rom_calc_rk45(Re, char_L, L0, LRe, C0, CRe, Q, modal_coef, t_eval):
   
   aT = sol.y
   time = sol.t
-  print('Time', time)
   print('Size of aT', aT.shape, modal_coef.shape)
+
+  print('saving modal coefficients')
+  np.savez('modal_coeff_r50_acc6', aT_pod = modal_coef, aT_rom = aT)
   
-  import matplotlib.pyplot as plt
-  plt.plot(modal_coef[:,0])
-  plt.plot(aT[:,0], '*')
-  plt.savefig("tmp_modal_coeff_0.png")
-  
-  plt.plot(modal_coef[:, 1])
-  plt.plot(aT[:, 1], '*')
-  plt.savefig("tmp_modal_coeff_1.png")
+#  import matplotlib.pyplot as plt
+#  plt.plot(modal_coef[:,0])
+#  plt.plot(aT[:,0], '*')
+#  plt.savefig("tmp_modal_coeff_0.png")
+#  
+#  plt.plot(modal_coef[:, 1])
+#  plt.plot(aT[:, 1], '*')
+#  plt.savefig("tmp_modal_coeff_1.png")
   return (aT)
 
 # -----------------------------------------------------------------------------

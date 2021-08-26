@@ -55,7 +55,8 @@ def jacobian_of_grid_2d(xi, eta, zeta, cell_center, accuracy):
   return(jacobian)
 
 # -----------------------------------------------------------------------------
-def jacobian_of_grid_3d(xi, eta, zeta, num_cell, cell_center, accuracy):
+def jacobian_of_grid_3d(xi, eta, zeta, num_cell, cell_center, \
+      accuracy_x, accuracy_y, accuracy_z):
 
   var_dim = cell_center.shape
   num_xi = var_dim[0]
@@ -69,7 +70,7 @@ def jacobian_of_grid_3d(xi, eta, zeta, num_cell, cell_center, accuracy):
   dx_dxi = np.zeros([num_xi, num_eta, num_zeta])
   dy_dxi = np.zeros([num_xi, num_eta, num_zeta])
   dz_dxi = np.zeros([num_xi, num_eta, num_zeta])
-  d_dxi = findiff.FinDiff(0, xi_delta, acc=accuracy)
+  d_dxi = findiff.FinDiff(0, xi_delta, acc=accuracy_x)
 
   # d/dxi
   for i_zeta in range(num_zeta):
@@ -81,7 +82,7 @@ def jacobian_of_grid_3d(xi, eta, zeta, num_cell, cell_center, accuracy):
   dx_deta = np.zeros([num_xi, num_eta, num_zeta])
   dy_deta = np.zeros([num_xi, num_eta, num_zeta])
   dz_deta = np.zeros([num_xi, num_eta, num_zeta])
-  d_deta = findiff.FinDiff(0, eta_delta, acc=accuracy)
+  d_deta = findiff.FinDiff(0, eta_delta, acc=accuracy_y)
 
   # d/deta
   for i_zeta in range(num_zeta):
@@ -93,7 +94,7 @@ def jacobian_of_grid_3d(xi, eta, zeta, num_cell, cell_center, accuracy):
   dx_dzeta = np.zeros([num_xi, num_eta, num_zeta])
   dy_dzeta = np.zeros([num_xi, num_eta, num_zeta])
   dz_dzeta = np.zeros([num_xi, num_eta, num_zeta])
-  d_dzeta = findiff.FinDiff(0, zeta_delta, acc=accuracy)
+  d_dzeta = findiff.FinDiff(0, zeta_delta, acc=accuracy_z)
 
   # d/dzeta
   for i_eta in range(num_eta):
@@ -208,10 +209,12 @@ def derivative(var, xi, eta, zeta, jacobian, accuracy):
         dvar_dxi_1D[i_cell, i_dim]  * jacobian[0, 1, i_cell] + \
         dvar_deta_1D[i_cell, i_dim] * jacobian[1, 1, i_cell]
 
+
   return(dvar_dx, dvar_dy)
 
 # -----------------------------------------------------------------------------
-def derivative_3d(var, xi, eta, zeta, num_cell, jacobian, accuracy):
+def derivative_3d(var, xi, eta, zeta, num_cell, jacobian, accuracy_x, \
+      accuracy_y, accuracy_z):
   # structure of input is [num_xi, num_eta, num_zeta, num_dof]
   # structure of output is [num_cell, num_dof]
   var_dim = var.shape
@@ -233,9 +236,9 @@ def derivative_3d(var, xi, eta, zeta, num_cell, jacobian, accuracy):
   var_zeta = np.reshape(var.transpose(2, 1, 0, 3),
                         (num_zeta, num_xi * num_eta * num_dof))
 
-  d_dxi = findiff.FinDiff(0, xi_delta, acc=accuracy)
-  d_deta = findiff.FinDiff(0, eta_delta, acc=accuracy)
-  d_dzeta = findiff.FinDiff(0, zeta_delta, acc=accuracy)
+  d_dxi = findiff.FinDiff(0, xi_delta, acc=accuracy_x)
+  d_deta = findiff.FinDiff(0, eta_delta, acc=accuracy_y)
+  d_dzeta = findiff.FinDiff(0, zeta_delta, acc=accuracy_z)
 
   dvar_dxi = np.zeros([num_xi, num_eta*num_zeta*num_dof])
   for i_xi_dof in range(num_eta*num_zeta*num_dof):
@@ -247,7 +250,7 @@ def derivative_3d(var, xi, eta, zeta, num_cell, jacobian, accuracy):
 
   dvar_dzeta = np.zeros([num_zeta, num_xi * num_eta * num_dof])
   for i_zeta_dof in range(num_xi * num_eta * num_dof):
-    dvar_dzeta[:,i_zeta_dof] = d_deta(var_zeta[:, i_zeta_dof])
+    dvar_dzeta[:,i_zeta_dof] = d_dzeta(var_zeta[:, i_zeta_dof])
 
   # reshape derivative to 3d
   # var_xi = [i_xi, (num_dof*num_zeta)*i_eta + (num_dof)*i_zeta + i_dof)]
