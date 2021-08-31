@@ -427,8 +427,6 @@ def rom_calc_rk45(Re, char_L, L0, LRe, C0, CRe, Q, modal_coef, t_eval):
 
   from scipy import integrate
   t_span = (t_eval[0], t_eval[len(t_eval)-1])
-  print("t_span", t_span)
-  print("t_eval", t_eval)
   sol = \
     integrate.solve_ivp(\
       lambda t,
@@ -441,10 +439,11 @@ def rom_calc_rk45(Re, char_L, L0, LRe, C0, CRe, Q, modal_coef, t_eval):
   
   aT = sol.y
   time = sol.t
+  print('Time', time)
   print('Size of aT', aT.shape, modal_coef.shape)
 
   print('saving modal coefficients')
-  np.savez('modal_coeff_r50_acc6', aT_pod = modal_coef, aT_rom = aT)
+  np.savez('modal_coeff_freq10_r50_acc6_snap1st', aT_pod = modal_coef, aT_rom = aT)
   
 #  import matplotlib.pyplot as plt
 #  plt.plot(modal_coef[:,0])
