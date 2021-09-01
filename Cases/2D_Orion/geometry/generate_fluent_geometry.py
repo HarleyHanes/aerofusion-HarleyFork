@@ -234,10 +234,35 @@ def main(argv=None):
               radius_CD * np.array([np.cos(beta_BQ), np.sin(beta_BQ), 0.0])
     print("beta_BQ", np.rad2deg(beta_BQ))
     points_C1_D1.append(point_Q)
-  points_C1_D1.append(center_CD)
+ # points_C1_D1.append(center_CD)
 
-  print("point_C1", point_C1, "vs", point_C1_prime, "vs", points_C2_C1[-1])
-  print("point_C2", point_C2, "vs", points_C2_C1[0])
+  # arc C2-D2
+  center_CD[1] = -center_CD[1]
+  print("center_CD", center_CD)
+  number_of_points_CD = mesh_options["geometry"]["number_of_points_CD"]
+  angle_center_CD_C2 = \
+    np.arctan2((point_C2[1]-center_CD[1]), (point_C2[0]-center_CD[0]))
+  angle_center_CD_D2 = \
+    np.arctan2((point_D2[1]-center_CD[1]), (point_D2[0]-center_CD[0]) )
+  angle_CD2 = angle_center_CD_D2 - angle_center_CD_C2
+ # print("(point_C1[0]-center_CD[0])", (point_C1[0]-center_CD[0]))
+ # print("(point_C1[1]-center_CD[1])", (point_C1[1]-center_CD[1]))
+ # print("(point_D1[0]-center_CD[0])", (point_D1[0]-center_CD[0]))
+ # print("(point_D1[1]-center_CD[1])", (point_D1[1]-center_CD[1]))
+ # print("angle_center_CD_C1", np.rad2deg(angle_center_CD_C1))
+ # print("angle_center_CD_D1", np.rad2deg(angle_center_CD_D1))
+ # print("angle_CD", np.rad2deg(angle_CD))
+  points_C2_D2 = []
+  for idx in range(number_of_points_CD):
+    beta_BQ = angle_center_CD_C2 - \
+              angle_CD * idx / (number_of_points_CD-1)
+    point_Q = center_CD + \
+              radius_CD * np.array([np.cos(beta_BQ), np.sin(beta_BQ), 0.0])
+    print("beta_BQ", np.rad2deg(beta_BQ))
+    points_C2_D2.append(point_Q)
+ # points_C1_D1.append(center_CD)
+ # print("point_C1", point_C1, "vs", point_C1_prime, "vs", points_C2_C1[-1])
+ # print("point_C2", point_C2, "vs", points_C2_C1[0])
   # creating dictionary of all the  8 points to store all the point in a sequence
   #  probe_points = {"p1" : point_A, "p2": point_E1, "p3": point_D1, \
   #                   "p4": point_C1, "p5": point_B, "p6": point_C2, \
@@ -261,10 +286,15 @@ def main(argv=None):
                  str(point[0])+ "  " + \
                  str(point[1])+ "  " + \
                  str(point[2])+ "\n")
+  
+  file.write(str(1) + "  " + str(len(probe_points)+1) + "  " +
+                 str(point_A[0])+ "  " + \
+                 str(point_A[1])+ "  " + \
+                 str(point_A[2])+ "\n")
   file.close()
 
   print("DEBUG points_C2_C1", points_C2_C1)
-  file = open(mesh_options["output"]["arc_BC1_file"], "w")
+  file = open(mesh_options["output"]["arc_C1C2_file"], "w")
   file.write("block"+ "  "+ "pointID"+ "  "+ "x" +"  "+ "y" + "  "+ "z"+ "\n")
   for pdx, point in enumerate(points_C2_C1):
       file.write(str(1) + "  " + str(pdx+1) + "  " +
@@ -281,7 +311,15 @@ def main(argv=None):
                  str(point[1])+ "  " + \
                  str(point[2])+ "\n")
   file.close()
-
+  
+  file = open(mesh_options["output"]["arc_CD2_file"], "w")
+  file.write("block"+ "  "+ "pointID"+ "  "+ "x" +"  "+ "y" + "  "+ "z"+ "\n")
+  for pdx, point in enumerate(points_C2_D2):
+      file.write(str(1) + "  " + str(pdx+1) + "  " +
+                 str(point[0])+ "  " + \
+                 str(point[1])+ "  " + \
+                 str(point[2])+ "\n")
+  file.close()
   
   # Data for plotting
   #output_filename_plot = mesh_options["output"]["plot_file"]
