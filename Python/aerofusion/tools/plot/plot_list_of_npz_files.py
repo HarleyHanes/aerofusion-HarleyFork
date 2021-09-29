@@ -80,10 +80,24 @@ def plot_npz_file(mesh_filename,
   mesh_xi_index_range   = mesh_data["mesh_xi_index_range"]
   mesh_eta_index_range  = mesh_data["mesh_eta_index_range"] 
   mesh_zeta_index_range = mesh_data["mesh_zeta_index_range"] 
-  
-  num_xi   = mesh_xi_index_range[1]   - mesh_xi_index_range[0]   + 1
-  num_eta  = mesh_eta_index_range[1]  - mesh_eta_index_range[0]  + 1
-  num_zeta = mesh_zeta_index_range[1] - mesh_zeta_index_range[0] + 1
+  mesh_xi_index_min = mesh_xi_index_range[0]
+  if mesh_xi_index_min  == "auto":
+    mesh_xi_index_min = xi.min()
+  mesh_xi_index_max = mesh_xi_index_range[1]
+  if mesh_xi_index_max  == "auto":
+    mesh_xi_index_max = xi.max()
+  mesh_eta_index_min = mesh_eta_index_range[0]
+  if mesh_eta_index_min  == "auto":
+    mesh_eta_index_min = eta.min()
+  mesh_eta_index_max = mesh_eta_index_range[1]
+  if mesh_eta_index_max  == "auto":
+    mesh_eta_index_max = eta.max()
+  mesh_zeta_index_min = mesh_zeta_index_range[0]
+  if mesh_zeta_index_min  == "auto":
+    mesh_zeta_index_min = zeta.min()
+  mesh_zeta_index_max = mesh_zeta_index_range[1]
+  if mesh_zeta_index_max  == "auto":
+    mesh_zeta_index_max = zeta.max()
   cell_centroid_3D = cell_centroid.reshape((num_xi, num_eta, num_zeta, 3))
   x = cell_centroid_3D[:,:,:,0]
   y = cell_centroid_3D[:,:,:,1]

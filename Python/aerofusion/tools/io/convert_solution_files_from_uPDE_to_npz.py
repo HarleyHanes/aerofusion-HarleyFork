@@ -102,9 +102,6 @@ def main(argv=None):
   os.makedirs(Path(options.output_filename_prefix).parent, exist_ok = True)
 
   #---------------------------------------------------------------------------
-  print("Read options -------------------------------------------------------")
-  print(libconf.dumps(options))
-  print("--------------------------------------------------------------------")
 
   if options["use_mpi"]:
     comm = MPI.COMM_WORLD
@@ -116,6 +113,12 @@ def main(argv=None):
     comm = None
     mpi_rank = 0
     mpi_size = 1
+
+  # Only the main mpi_rank will print out read options
+  if mpi_rank == 0:
+    print("Read options -----------------------------------------------------")
+    print(libconf.dumps(options))
+    print("------------------------------------------------------------------")
 
   # Initialize filenames
   output_filename_prefix = options["output_filename_prefix"]
@@ -139,9 +142,15 @@ def main(argv=None):
   local_list_of_time_steps = \
     partition_list(list_of_time_steps, mpi_rank, mpi_size)
 
+  print("mpi_rank", mpi_rank,
+        "local_list_of_time_steps", local_list_of_time_steps)
+
   # Loop in timesteps to obtain the snapshot matrix U
   for tdx, time_step in enumerate(tqdm(local_list_of_time_steps)):
 
+    print("mpi_rank", mpi_rank,
+          "tdx", tdx,
+          "time_step", time_step)
     time_step_str = str(time_step)
     input_hdf5_solution_file_name = \
       options["solution_files_prefix"] + \

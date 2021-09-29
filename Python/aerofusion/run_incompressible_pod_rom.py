@@ -120,6 +120,7 @@ def main(argv=None):
   # import ipdb
   # ipdb.set_trace()
   # Load mesh file first to allocate memory
+  print("Reading mesh file")
   input_mesh_filename = \
     options["io"]["snapshot_data_filename_prefix"] + "mesh.npz"
   mesh_data = np.load(input_mesh_filename)
@@ -131,9 +132,27 @@ def main(argv=None):
   mesh_xi_index_range   = mesh_data["mesh_xi_index_range"]
   mesh_eta_index_range  = mesh_data["mesh_eta_index_range"] 
   mesh_zeta_index_range = mesh_data["mesh_zeta_index_range"] 
-  num_xi   = mesh_xi_index_range[1]   - mesh_xi_index_range[0]   + 1
-  num_eta  = mesh_eta_index_range[1]  - mesh_eta_index_range[0]  + 1
-  num_zeta = mesh_zeta_index_range[1] - mesh_zeta_index_range[0] + 1
+  mesh_xi_index_min = mesh_xi_index_range[0]
+  if mesh_xi_index_min  == "auto":
+    mesh_xi_index_min = xi.min()
+  mesh_xi_index_max = mesh_xi_index_range[1]
+  if mesh_xi_index_max  == "auto":
+    mesh_xi_index_max = xi.max()
+  mesh_eta_index_min = mesh_eta_index_range[0]
+  if mesh_eta_index_min  == "auto":
+    mesh_eta_index_min = eta.min()
+  mesh_eta_index_max = mesh_eta_index_range[1]
+  if mesh_eta_index_max  == "auto":
+    mesh_eta_index_max = eta.max()
+  mesh_zeta_index_min = mesh_zeta_index_range[0]
+  if mesh_zeta_index_min  == "auto":
+    mesh_zeta_index_min = zeta.min()
+  mesh_zeta_index_max = mesh_zeta_index_range[1]
+  if mesh_zeta_index_max  == "auto":
+    mesh_zeta_index_max = zeta.max()
+  num_xi   = mesh_xi_index_max   - mesh_xi_index_min   + 1
+  num_eta  = mesh_eta_index_max  - mesh_eta_index_min  + 1
+  num_zeta = mesh_zeta_index_max - mesh_zeta_index_min + 1
   num_cell = cell_volume.shape[0]
   cell_centroid_3D = cell_centroid.reshape((num_xi, num_eta, num_zeta, 3))
   weights_ND = np.zeros([num_cell*num_dim])
