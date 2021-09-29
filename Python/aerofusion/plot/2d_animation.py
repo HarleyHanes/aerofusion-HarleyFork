@@ -11,13 +11,13 @@ aT_filename = 'modal_coeff_freq25_r50.npz'
 pod_filename  = 'pod_data_low_Re_freq25_r50.npz'
 u_rom_compact_filename = 'u_rom_compact_r50.npz'
 velocity_rom_filename = 'velocity_rom_r50.npz'
-velocity_DNS_filename = 'snapshot_data_Ferrante_low_Re_1000snap_freq25.npz'
-velocity_DNS_3d_filename = 'velocity_DNS_3d.npz'
-visual_directory = '/scratch/dramezan/runs/Ferrante_etal_2020/low_Re/freq_25_timesteps/full_domain/visualization/'
+velocity_WMLES_filename = 'snapshot_data_Ferrante_low_Re_1000snap_freq25.npz'
+velocity_WMLES_3d_filename = 'velocity_WMLES_3d.npz'
+visual_directory = '/scratch/bermejom/runs/Ferrante_etal_2020/low_Re/freq_25_timesteps/full_domain/visualization/'
 u_anime_name = 'u_rom_r50_1000dt_2.gif'
 v_anime_name = 'v_rom_r50_1000dt_2.gif'
-u_DNS_anime_name = 'u_DNS.gif'
-v_DNS_anime_name = 'v_DNS.gif'
+u_WMLES_anime_name = 'u_WMLES.gif'
+v_WMLES_anime_name = 'v_WMLES.gif'
 
 data = np.load(directory + grid_filename)
 
@@ -28,9 +28,9 @@ cell_centroid_shape = cell_centroid.shape
 ##### this part is temperary -- remove for other cases
 cell_center = cell_centroid[ :, 0:cell_centroid_shape[1]-1 , \
                                 0:cell_centroid_shape[2]-1, :]
-                             
+
 #######################################
-num_snap_visual = 999
+num_snap_visual = 18
 visual_freq = 9
 dim = cell_center.shape
 num_xi = dim[0]
@@ -41,20 +41,20 @@ eta = data['eta_index']
 zeta = data['zeta_index']
 print('xi, eta, zeta', xi.shape, eta.shape, zeta.shape)
 print('cell_volume', cell_volume.shape)
-data = np.load(directory + velocity_DNS_filename)
+data = np.load(directory + velocity_WMLES_filename)
 
-velocity_DNS_3d = data['velocity_3D']
-print('shape of 3d velocity DNS', velocity_DNS_3d.shape)
+velocity_WMLES_3d = data['velocity_3D']
+print('shape of 3d velocity WMLES', velocity_WMLES_3d.shape)
 ####### this part is temporary----
-u_DNS = np.zeros([num_xi, num_eta, num_zeta, num_snap_visual])
-v_DNS = np.zeros([num_xi, num_eta, num_zeta, num_snap_visual])
-u_DNS[:,:,:,:] = velocity_DNS_3d[:, 0:num_eta, 0:num_zeta, 0, 0:num_snap_visual]
-v_DNS[:,:,:,:] = velocity_DNS_3d[:, 0:num_eta, 0:num_zeta, 1, 0:num_snap_visual]
-np.savez(visual_directory + velocity_DNS_3d_filename, \
-u_DNS = u_DNS, v_DNS = v_DNS)
+u_WMLES = np.zeros([num_xi, num_eta, num_zeta, num_snap_visual])
+v_WMLES = np.zeros([num_xi, num_eta, num_zeta, num_snap_visual])
+u_WMLES[:,:,:,:] = velocity_WMLES_3d[:, 0:num_eta, 0:num_zeta, 0, 0:num_snap_visual]
+v_WMLES[:,:,:,:] = velocity_WMLES_3d[:, 0:num_eta, 0:num_zeta, 1, 0:num_snap_visual]
+np.savez(visual_directory + velocity_WMLES_3d_filename, \
+u_WMLES = u_WMLES, v_WMLES = v_WMLES)
 
 ########################### 
-## visualizing DNS data
+## visualizing WMLES data
 num_snap_visual = num_snap_visual/visual_freq
 num_snap_visual = math.floor(num_snap_visual)
 print('num_snap_visual', num_snap_visual)
@@ -62,18 +62,18 @@ fig, ax = plt.subplots()
 camera = Camera(fig)
 for i_snap in range(num_snap_visual):
     ax.contourf(cell_center[:, :, 0, 0], cell_center[:, :, 0, 1], \
-    u_DNS[:, :, 0, i_snap*visual_freq] , levels = 256,  cmap='bwr', extend = 'both')
+    u_WMLES[:, :, 0, i_snap*visual_freq] , levels = 256,  cmap='bwr', extend = 'both')
     camera.snap()
 anim = camera.animate()
-anim.save(visual_directory + u_DNS_anime_name)
+anim.save(visual_directory + u_WMLES_anime_name)
 
 for i_snap in range(num_snap_visual):
     print('snap to be visualized', i_snap*visual_freq)
     ax.contourf(cell_center[:, :, 0, 0], cell_center[:, :, 0, 1], \
-    v_DNS[:, :, 0, i_snap*visual_freq] , levels = 256, cmap='bwr', extend = 'both')
+    v_WMLES[:, :, 0, i_snap*visual_freq] , levels = 256, cmap='bwr', extend = 'both')
     camera.snap()
 anim2 = camera.animate()
-anim2.save(visual_directory + v_DNS_anime_name)
+anim2.save(visual_directory + v_WMLES_anime_name)
 
 import ipdb
 ipdb.set_trace()
