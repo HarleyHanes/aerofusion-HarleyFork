@@ -110,117 +110,37 @@ def main(argv=None):
   print("--------------------------------------------------------------------")
 
   # Initialize filenames
-  snapshot_data_filename        = options.io["snapshot_data_filename"]
   pod_data_filename             = options.io["pod_data_filename"]
   rom_matrices_filename         = options.io["rom_matrices_filename"]
   rom_integration_data_filename = options.io["rom_integration_data_filename"]
 
-  # ---------------------------------------------------------------------------
-  # Snapshot data generation
-  # ---------------------------------------------------------------------------
-  if "snapshot_data" in options:
 
-    snapshot_data_options = options["snapshot_data"]
-    padding_zeros = snapshot_data_options["padding_zeros"]
-    list_of_time_steps = \
-      [tdx for tdx in range(snapshot_data_options["time_step_min"],
-                          snapshot_data_options["time_step_max"],
-                          snapshot_data_options["time_step_delta"])]
-    simulation_time_step_array = np.zeros(len(list_of_time_steps))
-    simulation_time_array = np.zeros(len(list_of_time_steps))
+  num_dim  = options.num_dimensions
 
-  # Loop in timesteps to obtain the snapshot matrix U
-  for tdx, time_step in enumerate(tqdm(list_of_time_steps)):
+  # import ipdb
+  # ipdb.set_trace()
+  # Load mesh file first to allocate memory
+  input_mesh_filename = \
+    options["io"]["snapshot_data_filename_prefix"] + "mesh.npz"
+  mesh_data = np.load(input_mesh_filename)
+  cell_volume           = mesh_data['cell_volume']
+  cell_centroid         = mesh_data['cell_centroid']
+  xi                    = mesh_data['xi_index']
+  eta                   = mesh_data['eta_index']
+  zeta                  = mesh_data['zeta_index']
+  mesh_xi_index_range   = mesh_data["mesh_xi_index_range"]
+  mesh_eta_index_range  = mesh_data["mesh_eta_index_range"] 
+  mesh_zeta_index_range = mesh_data["mesh_zeta_index_range"] 
+  num_xi   = mesh_xi_index_range[1]   - mesh_xi_index_range[0]   + 1
+  num_eta  = mesh_eta_index_range[1]  - mesh_eta_index_range[0]  + 1
+  num_zeta = mesh_zeta_index_range[1] - mesh_zeta_index_range[0] + 1
+  num_cell = cell_volume.shape[0]
+  cell_centroid_3D = cell_centroid.reshape((num_xi, num_eta, num_zeta, 3))
+  weights_ND = np.zeros([num_cell*num_dim])
+  for i_dim in range(num_dim):
+    weights_ND[i_dim*num_cell : (i_dim+1)*num_cell] = cell_volume
+    
 
-    time_step_str = str(time_step)
-    pod_solution_filename = \
-      snapshot_data_options["les_solution_prefix"] + \
-      time_step_str.zfill(padding_zeros) + ".hdf5"
-
-    print("\nProcessing time step", time_step_str, pod_solution_filename)
-    # Get data fields as 1D arrays and 3D arrays as dictionaries of
-    # - 1D arrays: use the unstructured-grid cell-based data
-    # - 3D arrays: use the structured-grid underlying topology via the
-    #   mesh_index_xi,eta,zeta
-    simulation_time_step, simulation_time, \
-      data_field_1D_arrays, data_field_3D_arrays  = \
-        hdf5_cell_data_to_numpy_array.read(
-          pod_solution_filename,
-          fields_to_read = "velocity",
-          xi_min = snapshot_data_options["mesh_xi_index_range"][0],
-          xi_max = snapshot_data_options["mesh_xi_index_range"][1],
-          eta_min = snapshot_data_options["mesh_eta_index_range"][0],
-          eta_max = snapshot_data_options["mesh_eta_index_range"][1],
-          zeta_min = snapshot_data_options["mesh_zeta_index_range"][0],
-          zeta_max = snapshot_data_options["mesh_zeta_index_range"][1])
-
-    if tdx == 0:
-      velocityData_1D = data_field_1D_arrays['velocity']
-      velocity_3D = data_field_3D_arrays['velocity']
-      dim_1D = velocityData_1D.shape
-      dim_3D = velocity_3D.shape
-      velocityData_3D = \
-        np.zeros([dim_3D[0], dim_3D[1],dim_3D[2],dim_3D[3], 1])      
-      velocityData_3D[:,:,:,:,0] = velocity_3D[:,:,:,:]     
-      velocityData_1D = \
-        np.reshape(velocityData_1D.transpose(),(dim_1D[0]*dim_1D[1],1)) 
-      simulation_time_step_array[0] = simulation_time_step
-      simulation_time_array[0] = simulation_time
-    else:
-      velocity_tdx_3D = \
-        np.zeros([dim_3D[0], dim_3D[1],dim_3D[2],dim_3D[3], 1])      
-      velocity_tdx_1D = data_field_1D_arrays['velocity']
-      velocity_tdx_3D[:,:,:,:,0] = data_field_3D_arrays['velocity']
-      velocity_tdx_1D = \
-        np.reshape(velocity_tdx_1D.transpose(),(dim_1D[0]*dim_1D[1],1)) 
-      velocityData_1D = \
-        np.concatenate((velocityData_1D, velocity_tdx_1D),axis = 1)
-      velocityData_3D = \
-        np.concatenate((velocityData_3D,velocity_tdx_3D),axis =4)
-      simulation_time_step_array[tdx] = simulation_time_step
-      simulation_time_array[tdx] = simulation_time
-      
-      print('time step',
-            simulation_time_step_array[tdx],
-            simulation_time_array[tdx])
-       #if tdx == len(list_of_time_steps)-1:
-    if "plot" in snapshot_data_options:
-      # Plot 3D array using structured-grid underlying topology
-      from aerofusion.plot.plot_2D import plot_pcolormesh
-      plot_pcolormesh(
-        data_field_3D_arrays["cell_centroid"][:,:,0,0],
-        data_field_3D_arrays["cell_centroid"][:,:,0,1],
-        data_field_3D_arrays["velocity"][:,:,0,0],
-        options["output_filename_prefix"] + \
-          snapshot_data_options["plot"]["output_filename_midfix"] + \
-          time_step_str.zfill(padding_zeros)+ ".png",
-        font_size = snapshot_data_options["plot"]["font_size"],
-        fig_size = snapshot_data_options["plot"]["fig_size"],
-        title = snapshot_data_options["plot"]["vertical_slice"]["title"],
-        vmin = snapshot_data_options["plot"]["vertical_slice"]["vmin"],
-        vmax = snapshot_data_options["plot"]["vertical_slice"]["vmax"],
-        cmap = snapshot_data_options["plot"]["vertical_slice"]["cmap"],
-        colorbar_label = \
-          snapshot_data_options["plot"]["vertical_slice"]["colorbar_label"],
-        xlabel = snapshot_data_options["plot"]["vertical_slice"]["xlabel"],
-        ylabel = snapshot_data_options["plot"]["vertical_slice"]["ylabel"])
-
-  # Write data to output file
-  os.makedirs(Path(snapshot_data_filename).parent, exist_ok=True)
-  print("\nWriting snapshot data to file", snapshot_data_filename )
-  np.savez(snapshot_data_filename,
-           simulation_time_step_array = simulation_time_step_array,
-           simulation_time_array      = simulation_time_array,
-           velocity_1D   = velocityData_1D,
-           velocity_3D   = velocityData_3D,
-           cell_volume   = data_field_1D_arrays['cell_volume'],
-           cell_centroid = data_field_3D_arrays['cell_centroid'],
-           xi_index      = data_field_1D_arrays['mesh_index_xi'],
-           eta_index     = data_field_1D_arrays['mesh_index_eta'],
-           zeta_index    = data_field_1D_arrays['mesh_index_zeta']) 
-
- # import ipdb
- # ipdb.set_trace()
   # ---------------------------------------------------------------------------
   # POD
   # ---------------------------------------------------------------------------
@@ -228,53 +148,48 @@ def main(argv=None):
 
     pod_options = options["pod"]
 
-    print("Loading snapshot data from file", snapshot_data_filename)
-    directory_snapshots = options.pod.directory
-    snapshot_data = np.load(directory_snapshots + snapshot_data_filename)
-    # Assign data to convenience variables
-    velocity_3D     = snapshot_data['velocity_3D']
-    cell_volume     = snapshot_data['cell_volume']
-    cell_centroid   = snapshot_data['cell_centroid']
-    xi              = snapshot_data['xi_index']
-    eta             = snapshot_data['eta_index']
-    zeta            = snapshot_data['zeta_index']
-    simulation_time = snapshot_data['simulation_time_array']
-    
-    num_dim  = options.num_dimensions
-    num_xi   = (cell_centroid.shape)[0]
-    num_eta  = (cell_centroid.shape)[1]
-    num_zeta = (cell_centroid.shape)[2]
-    num_cell = (cell_volume.shape)[0]
-    num_snapshots = (velocity_3D.shape)[4]
-    velocity_1D = np.zeros([num_cell, num_dim, num_snapshots])
-    
-    print('Shape of velocity_3D', velocity_3D.shape)
-    print('Shape of cell_centroid', cell_centroid.shape)
-    print('Shape of cell_volume', cell_volume.shape)
- #   # Plot contour of read velocity in the x direction
-##    plot_contour(
-##      cell_centroid[:,:,0,0],
-##      cell_centroid[:,:,0,1],
-##      velocity_3D[:,:,0,0,0],
-##      options.output_filename_prefix + 'velocity_x.png',
-##      options.plot.contour.levels,
-##      options.plot.contour.vmin,
-##      options.plot.contour.vmax)
-##
-    # Convert velocity from 3D to 1D
-    print('converting velocity 3d to 1d')
-    for i_snap in range(num_snapshots):
-      for i_dim in range(num_dim):
-        print('i_snap', 'i_dim', i_snap, i_dim)
-        velocity_1D[:, i_dim, i_snap] = \
-          arr_conv.array_3D_to_1D(\
-            xi, eta, zeta, num_cell, velocity_3D[:,:,:, i_dim, i_snap])
+    print("Loading snapshot data from files")
+
+    #ivanMod
+    snapshot_data_options = options["pod"]["input_snapshot_data"]
+    padding_zeros = snapshot_data_options["padding_zeros"]
+    list_of_time_steps = \
+      [tdx for tdx in range(snapshot_data_options["time_step_min"],
+                            snapshot_data_options["time_step_max"],
+                            snapshot_data_options["time_step_delta"])]
+    simulation_time_step_array = np.zeros(len(list_of_time_steps))
+    simulation_time_array = np.zeros(len(list_of_time_steps))
+
+    num_snapshots = len(list_of_time_steps)
+
+    ## Assign data to convenience variables
+    print("num_snapshots", num_snapshots)
     velocity_1D_compact = np.zeros([num_cell*num_dim, num_snapshots])
-    print('restructuring velocity_1d')
-    for i_snap in range(num_snapshots):
-      velocity_1D_compact[:,i_snap] = \
-        np.reshape((velocity_1D[:, :, i_snap]).transpose(), (num_dim*num_cell))
-    
+    # Loop in timesteps to obtain the snapshot matrix U
+    for tdx, time_step in enumerate(tqdm(list_of_time_steps)):
+
+      time_step_str = str(time_step)
+      input_solution_fields_filename = \
+        options["io"]["snapshot_data_filename_prefix"] + \
+        time_step_str.zfill(padding_zeros) + ".npz"
+      #print("\nReading solution files at time step",
+      #  time_step_str, "from file", input_solution_fields_filename)
+      solution_fields_data = np.load(input_solution_fields_filename)
+      simulation_time_step = solution_fields_data["simulation_time_step"]
+      # Sanity check that the time steps match what we expect
+      if simulation_time_step != time_step:
+        print("ERROR - Mismatch in read simulation time step",
+              simulation_time_step, "vs", time_step) 
+      simulation_time = solution_fields_data["simulation_time"]
+      velocityData_1D_x = solution_fields_data["velocity_1D_x"]
+      velocityData_1D_y = solution_fields_data["velocity_1D_y"]
+      velocityData_1D_z = solution_fields_data["velocity_1D_z"]
+      simulation_time_step_array[tdx] = simulation_time_step
+      simulation_time_array[tdx] = simulation_time
+      velocity_components_concatenated = np.concatenate(\
+        (velocityData_1D_x,velocityData_1D_y,velocityData_1D_z))
+      velocity_1D_compact[:,tdx] = velocity_components_concatenated
+        
     num_dof = int(num_cell * num_dim)
     print('mean velocity calculation')
     # mean calculation of velocity
@@ -289,10 +204,6 @@ def main(argv=None):
       mean_reduced_velocity[:,i_mode] = \
         velocity_1D_compact[:,i_mode] - velocity_mean[:]
     
-    weights_ND = np.zeros([num_cell*num_dim])
-    for i_dim in range(num_dim):
-      weights_ND[i_dim*num_cell : (i_dim+1)*num_cell] = cell_volume
-    
     print('Calculating', options.pod.num_modes, 'POD modes')
     (phi, modal_coeff, pod_lambda) = pod_modes.Find_Modes(\
         mean_reduced_velocity,
@@ -304,12 +215,15 @@ def main(argv=None):
     num_modes = options.pod.num_modes 
     phi_1D = np.zeros([num_cell, num_dim, num_modes]) 
     for i_mode in range(num_modes):
+      print("DEBUG", i_mode, num_modes, num_dim, num_cell)
       phi_1D[:, :, i_mode] = \
         np.reshape(phi[:, i_mode], (num_dim, num_cell)).transpose()
     
     phi_3D = np.zeros([num_xi, num_eta, num_zeta, num_dim, num_modes])
     for i_dim in range(num_dim):
       for i_mode in range(num_modes):
+        print("DEBUG", i_dim, i_mode, num_dim, num_modes, num_cell)
+        print("DEBUG", phi_1D[:, i_dim, i_mode].shape)
         phi_3D[:, :, :, i_dim, i_mode] = \
           arr_conv.array_1D_to_3D(\
             xi, eta, zeta, num_cell,\
@@ -358,13 +272,13 @@ def main(argv=None):
    # 
     print('Saving POD data to file', pod_data_filename)
     np.savez(pod_data_filename,
-             simulation_time = simulation_time,
+             simulation_time_array = simulation_time_array,
              phi = phi,
              pod_lambda = pod_lambda,
              modal_coeff = modal_coeff,
              velocity_mean = velocity_mean)
-  import ipdb
-  ipdb.set_trace()
+  #import ipdb
+  #ipdb.set_trace()
   # ---------------------------------------------------------------------------
   # ROM
   # ---------------------------------------------------------------------------
@@ -373,11 +287,11 @@ def main(argv=None):
     print("Loading POD data from file", pod_data_filename)
     pod_data = np.load(pod_data_filename)
     # Assign data to convenience variables
-    velocity_mean   = pod_data['velocity_mean']
-    simulation_time = pod_data['simulation_time']
-    pod_lambda      = pod_data['pod_lambda']
-    phi             = pod_data['phi']
-    modal_coeff     = pod_data['modal_coeff']
+    velocity_mean         = pod_data['velocity_mean']
+    simulation_time_array = pod_data['simulation_time_array']
+    pod_lambda            = pod_data['pod_lambda']
+    phi                   = pod_data['phi']
+    modal_coeff           = pod_data['modal_coeff']
 
     num_dim  = options.num_dimensions
     num_cell = len(velocity_mean)//num_dim
@@ -398,7 +312,7 @@ def main(argv=None):
        eta,
        zeta,
        num_cell,
-       cell_centroid,
+       cell_centroid_3D,
        options.rom.jacobian.order_derivatives_x,
        options.rom.jacobian.order_derivatives_y,
        options.rom.jacobian.order_derivatives_z)
@@ -408,7 +322,7 @@ def main(argv=None):
          xi,
          eta,
          zeta,
-         cell_centroid,
+         cell_centroid_3D,
          num_cell,
          phi,
          weights_ND,
@@ -433,8 +347,8 @@ def main(argv=None):
     CRe_calc = matrices['CRe_calc']
     Q_calc   = matrices['Q_calc']
 
-    integration_times = simulation_time[1:]
-   # print('ROM RK45 integration over times', integration_times)
+    integration_times = simulation_time_array[1:]
+    print('ROM RK45 integration over times', integration_times)
     char_L = 1
     aT = incrom.rom_calc_rk45(\
            options.rom.reynolds_number,
