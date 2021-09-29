@@ -10,6 +10,11 @@ import logging
 #ivanFuture from numba import jit
 
 # -----------------------------------------------------------------------------
+def idx_jdx_kdx_to_ldx(idx,jdx,kdx,dims):
+  #return idx + dims[0] * (jdx + dims[1] * kdx) # requires use of transpose
+  return kdx + dims[2] * (jdx + dims[1] * idx) # avoids use of transpose
+
+# -----------------------------------------------------------------------------
 
 def read(input_filename,
          *args,
@@ -61,6 +66,12 @@ def read(input_filename,
   mesh_index_xi_array   = h5_data["fields"]["cell_data"]["mesh_index_xi"][()]
   mesh_index_eta_array  = h5_data["fields"]["cell_data"]["mesh_index_eta"][()]
   mesh_index_zeta_array = h5_data["fields"]["cell_data"]["mesh_index_zeta"][()]
+  #print("DEBUG xi min/max",   min(mesh_index_xi_array),
+  #                            max(mesh_index_xi_array))
+  #print("DEBUG eta min/max",  min(mesh_index_eta_array),
+  #                            max(mesh_index_eta_array))
+  #print("DEBUG zeta min/max", min(mesh_index_zeta_array),
+  #                            max(mesh_index_zeta_array))
   if mesh_index_xi_array is None  or \
      mesh_index_eta_array is None or \
      mesh_index_zeta_array is None:
@@ -93,10 +104,10 @@ def read(input_filename,
     [min_mesh_index_eta_array, max_mesh_index_eta_array]
   mesh_index_zeta_range = \
     [min_mesh_index_zeta_array, max_mesh_index_zeta_array]
-  print("mesh_index_{xi,eta,zeta}_range",
-        mesh_index_xi_range,
-        mesh_index_eta_range,
-        mesh_index_zeta_range)
+  #print("mesh_index_{xi,eta,zeta}_range",
+  #      mesh_index_xi_range,
+  #      mesh_index_eta_range,
+  #      mesh_index_zeta_range)
 
   shape_3D = [ 1 + mesh_index_xi_range[1]  - mesh_index_xi_range[0],
                1 + mesh_index_eta_range[1] - mesh_index_eta_range[0],
@@ -108,8 +119,11 @@ def read(input_filename,
   data_fields_1D_arrays = {}
   data_fields_3D_arrays = {}
 
-  cell_centroid_1D_array = []
-  cell_volume_1D_array = []
+  number_of_cells_to_output = shape_3D[0]*shape_3D[1]*shape_3D[2]
+  cell_centroid_1D_array = \
+    np.empty([number_of_cells_to_output, 3], dtype = np.float64)
+  cell_volume_1D_array = \
+    np.empty(number_of_cells_to_output, dtype = np.float64)
   cell_centroid_3D_array = \
     np.empty([shape_3D[0], shape_3D[1], shape_3D[2], 3], dtype = np.float64)
   cell_volume_3D_array = \
@@ -124,14 +138,17 @@ def read(input_filename,
       idx = mesh_index_xi_array[cdx]   - min_mesh_index_xi_array
       jdx = mesh_index_eta_array[cdx]  - min_mesh_index_eta_array
       kdx = mesh_index_zeta_array[cdx] - min_mesh_index_zeta_array
+      ldx = idx_jdx_kdx_to_ldx(idx,jdx,kdx,shape_3D)
       cell_centroid_3D_array[idx,jdx,kdx] = cell_centroid[cdx]
-      cell_centroid_1D_array.append(cell_centroid[cdx])
+      #cell_centroid_1D_array.append(cell_centroid[cdx])
+      cell_centroid_1D_array[ldx,:] = cell_centroid[cdx]
       cell_volume_3D_array[idx,jdx,kdx] = cell_volume[cdx]
-      cell_volume_1D_array.append(cell_volume[cdx])
+      #cell_volume_1D_array.append(cell_volume[cdx])
+      cell_volume_1D_array[ldx] = cell_volume[cdx]
   data_fields_3D_arrays["cell_centroid"] = cell_centroid_3D_array
-  data_fields_1D_arrays["cell_centroid"] = np.array(cell_centroid_1D_array)
+  data_fields_1D_arrays["cell_centroid"] = cell_centroid_1D_array
   data_fields_3D_arrays["cell_volume"]   = cell_volume_3D_array
-  data_fields_1D_arrays["cell_volume"]   = np.array(cell_volume_1D_array)
+  data_fields_1D_arrays["cell_volume"]   = cell_volume_1D_array
 
   for field_name in h5_data["fields"]["cell_data"]:
     if (fields_to_read == "all" or \
@@ -139,10 +156,16 @@ def read(input_filename,
        field_name not in skip_field_names:
       data_field = h5_data["fields"]["cell_data"][field_name][()]
       if len(data_field.shape) == 1:
+        data_field_1D_array = \
+          np.empty(number_of_cells_to_output,
+            dtype = data_field.dtype)
         data_field_3D_array = \
           np.empty([shape_3D[0], shape_3D[1], shape_3D[2]],
             dtype = data_field.dtype)
       elif len(data_field.shape) == 2:
+        data_field_1D_array = \
+          np.empty([number_of_cells_to_output, data_field.shape[-1]],
+            dtype = data_field.dtype)
         data_field_3D_array = \
           np.empty([shape_3D[0], shape_3D[1], shape_3D[2],
                     data_field.shape[-1]],
@@ -150,7 +173,6 @@ def read(input_filename,
       else:
         logging.error("Unhandled shape '" + str(data_field.shape))
         return None
-      data_field_1D_array = []
       for cdx in range(len(number_of_nodes_of_cell_array)):
         if mesh_index_xi_array[cdx]   >= min_mesh_index_xi_array   and \
            mesh_index_xi_array[cdx]   <= max_mesh_index_xi_array   and \
@@ -161,10 +183,15 @@ def read(input_filename,
           idx = mesh_index_xi_array[cdx]   - mesh_index_xi_range[0]
           jdx = mesh_index_eta_array[cdx]  - mesh_index_eta_range[0]
           kdx = mesh_index_zeta_array[cdx] - mesh_index_zeta_range[0]
+          ldx = idx_jdx_kdx_to_ldx(idx,jdx,kdx,shape_3D)
           data_field_3D_array[idx,jdx,kdx] = data_field[cdx]
-          data_field_1D_array.append(data_field[cdx])
+          if len(data_field.shape) == 1:
+            data_field_1D_array[ldx] = data_field[cdx]
+          elif len(data_field.shape) == 2:
+            data_field_1D_array[ldx,:] = data_field[cdx,:]
       # Add to dictionary
-      data_fields_1D_arrays[field_name] = np.array(data_field_1D_array)
+      #data_fields_1D_arrays[field_name] = np.array(data_field_1D_array)
+      data_fields_1D_arrays[field_name] = data_field_1D_array
       data_fields_3D_arrays[field_name] = data_field_3D_array
 
   return simulation_timestep, simulation_time, \
