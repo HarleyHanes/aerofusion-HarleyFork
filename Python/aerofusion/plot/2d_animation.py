@@ -26,6 +26,7 @@ num_snap_visual = math.floor(num_snap_visual)
 ###-------------------------------------------
 print('loading grid data')
 data = np.load(directory + grid_filename)
+
 cell_volume = data['cell_volume']
 num_cell = (cell_volume.shape)[0]
 cell_centroid = data['cell_centroid']
@@ -35,6 +36,8 @@ cell_center = cell_centroid[ :, 0:cell_centroid_shape[1]-1 , \
                                 0:cell_centroid_shape[2]-1, :]
                              
 #######################################
+num_snap_visual = 999
+visual_freq = 9
 dim = cell_center.shape
 num_xi = dim[0]
 num_eta = dim[1]
@@ -44,6 +47,7 @@ eta = data['eta_index']
 zeta = data['zeta_index']
 print('xi, eta, zeta', xi.shape, eta.shape, zeta.shape)
 print('cell_volume', cell_volume.shape)
+data = np.load(directory + velocity_DNS_filename)
 
 ###-------------------------------------------------
 print('loading pod data')
@@ -225,7 +229,11 @@ ipdb.set_trace()
 #print('reconstructing compact data to 3d')
 #u_rom_3d = np.zeros([num_xi, num_eta, num_zeta, num_snap_visual])
 #v_rom_3d = np.zeros([num_xi, num_eta, num_zeta, num_snap_visual])
+#
+#print('shape of u_rom, v_rom', u_rom_3d.shape, v_rom_3d.shape)
+#
 #for i_snap in range(num_snap_visual):
+#    print('i_snap', i_snap)
 #    u_rom_3d[:,:,:,i_snap] = arr_conv.array_1D_to_3D( \
 #     xi, eta, zeta, num_cell, u_rom_compact[:, i_snap])
 #    v_rom_3d[:,:,:,i_snap] = arr_conv.array_1D_to_3D( \
