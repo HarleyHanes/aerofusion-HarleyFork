@@ -40,3 +40,21 @@ def Find_Mean(Var):
   Mean = np.zeros(Ncell)
   Mean = Var.mean(axis=1)
   return Mean
+
+def find_number_of_modes (A, w, energy_criteria):
+    dim = A.shape
+    num_snap = dim[1]
+    C = 0
+    C = A.transpose()
+    C = C * w / num_snap
+    C = np.matmul(C, A)
+    U, sigma, YT = svd(C)
+    lambda_pod = np.sqrt(sigma)
+    num_modes = 0
+    for i_mode in range(num_snap+1):
+        ratio =  (np.sum(lambda_pod[0:i_mode]))/np.sum(lambda_pod)
+        if ratio >=  energy_criteria:
+            num_modes = i_mode
+            break
+
+    return(num_modes)
