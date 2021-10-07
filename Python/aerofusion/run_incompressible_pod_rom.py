@@ -232,21 +232,22 @@ def main(argv=None):
     #--------------------------------------------------------------------------
     print('phi, lambda', phi.shape, pod_lambda.shape)
     num_modes = options.pod.num_modes 
-    phi_1D = np.zeros([num_cell, num_dim, num_modes]) 
-    for i_mode in range(num_modes):
-      print("DEBUG", i_mode, num_modes, num_dim, num_cell)
-      phi_1D[:, :, i_mode] = \
-        np.reshape(phi[:, i_mode], (num_dim, num_cell)).transpose()
-    
-    phi_3D = np.zeros([num_xi, num_eta, num_zeta, num_dim, num_modes])
-    for i_dim in range(num_dim):
-      for i_mode in range(num_modes):
-        print("DEBUG", i_dim, i_mode, num_dim, num_modes, num_cell)
-        print("DEBUG", phi_1D[:, i_dim, i_mode].shape)
-        phi_3D[:, :, :, i_dim, i_mode] = \
-          arr_conv.array_1D_to_3D(\
-            xi, eta, zeta, num_cell,\
-            phi_1D[:, i_dim, i_mode])
+   ###---visualizing modes
+   # phi_1D = np.zeros([num_cell, num_dim, num_modes]) 
+   # for i_mode in range(num_modes):
+   #   print("DEBUG", i_mode, num_modes, num_dim, num_cell)
+   #   phi_1D[:, :, i_mode] = \
+   #     np.reshape(phi[:, i_mode], (num_dim, num_cell)).transpose()
+   # 
+   # phi_3D = np.zeros([num_xi, num_eta, num_zeta, num_dim, num_modes])
+   # for i_dim in range(num_dim):
+   #   for i_mode in range(num_modes):
+   #     print("DEBUG", i_dim, i_mode, num_dim, num_modes, num_cell)
+   #     print("DEBUG", phi_1D[:, i_dim, i_mode].shape)
+   #     phi_3D[:, :, :, i_dim, i_mode] = \
+   #       arr_conv.array_1D_to_3D(\
+   #         xi, eta, zeta, num_cell,\
+   #         phi_1D[:, i_dim, i_mode])
    # print('plotting modes and sigma') 
    # plotting modes and sigma
    # num_modes = pod_lambda.shape
@@ -358,13 +359,13 @@ def main(argv=None):
               CRe_calc = CRe_calc,
               Q_calc   = Q_calc)
 
-    print('Reading matrices from file', rom_matrices_filename)
-    matrices = np.load(rom_matrices_filename)
-    L0_calc  = matrices['L0_calc']
-    LRe_calc = matrices['LRe_calc']
-    C0_calc  = matrices['C0_calc']
-    CRe_calc = matrices['CRe_calc']
-    Q_calc   = matrices['Q_calc']
+   # print('Reading matrices from file', rom_matrices_filename)
+   # matrices = np.load(rom_matrices_filename)
+   # L0_calc  = matrices['L0_calc']
+   # LRe_calc = matrices['LRe_calc']
+   # C0_calc  = matrices['C0_calc']
+   # CRe_calc = matrices['CRe_calc']
+   # Q_calc   = matrices['Q_calc'
 
     integration_times = simulation_time_array[1:]
     print('ROM RK45 integration over times', integration_times)

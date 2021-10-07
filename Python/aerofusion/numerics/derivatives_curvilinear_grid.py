@@ -59,7 +59,6 @@ def jacobian_of_grid_2d(xi, eta, zeta, cell_center, accuracy):
 def jacobian_of_grid_3d(xi, eta, zeta, num_cell, cell_center, \
       accuracy_x, accuracy_y, accuracy_z):
 
-  t0 = time.time()
 
   var_dim = cell_center.shape
   num_xi = var_dim[0]
@@ -76,12 +75,14 @@ def jacobian_of_grid_3d(xi, eta, zeta, num_cell, cell_center, \
   d_dxi = findiff.FinDiff(0, xi_delta, acc=accuracy_x)
 
   # d/dxi
+  t_begin = time.time()
   for i_zeta in range(num_zeta):
     for i_eta in range(num_eta):
       dx_dxi[:,i_eta,i_zeta] = d_dxi(cell_center[:, i_eta, i_zeta, 0])
       dy_dxi[:,i_eta,i_zeta] = d_dxi(cell_center[:, i_eta, i_zeta, 1])
       dz_dxi[:,i_eta,i_zeta] = d_dxi(cell_center[:, i_eta, i_zeta, 2])
-  print("DEBUG d/dxi", time.time()-t0)
+  t_end = time.time()
+  print("DEBUG jacobian d/dxi", t_end - t_begin)
 
   dx_deta = np.zeros([num_xi, num_eta, num_zeta])
   dy_deta = np.zeros([num_xi, num_eta, num_zeta])
@@ -89,12 +90,14 @@ def jacobian_of_grid_3d(xi, eta, zeta, num_cell, cell_center, \
   d_deta = findiff.FinDiff(0, eta_delta, acc=accuracy_y)
 
   # d/deta
+  t_begin = time.time()
   for i_zeta in range(num_zeta):
     for i_xi in range(num_xi):
       dx_deta[i_xi, :, i_zeta] = d_deta(cell_center[i_xi, :, i_zeta, 0])
       dy_deta[i_xi, :, i_zeta] = d_deta(cell_center[i_xi, :, i_zeta, 1])
       dz_deta[i_xi, :, i_zeta] = d_deta(cell_center[i_xi, :, i_zeta, 2])
-  print("DEBUG d/deta", time.time()-t0)
+  t_end = time.time()
+  print("DEBUG jacobian d/deta", t_end - t_begin)
 
   dx_dzeta = np.zeros([num_xi, num_eta, num_zeta])
   dy_dzeta = np.zeros([num_xi, num_eta, num_zeta])
@@ -102,14 +105,16 @@ def jacobian_of_grid_3d(xi, eta, zeta, num_cell, cell_center, \
   d_dzeta = findiff.FinDiff(0, zeta_delta, acc=accuracy_z)
 
   # d/dzeta
+  t_brgin = time.time()
   for i_eta in range(num_eta):
     for i_xi in range(num_xi):
       dx_dzeta[i_xi, i_eta, :] = d_dzeta(cell_center[i_xi, i_eta, :, 0])
       dy_dzeta[i_xi, i_eta, :] = d_dzeta(cell_center[i_xi, i_eta, :, 1])
       dz_dzeta[i_xi, i_eta, :] = d_dzeta(cell_center[i_xi, i_eta, :, 2])
-  print("DEBUG d/dzeta", time.time()-t0)
+  t_end = time.time() 
+  print("DEBUG jacobian d/dzeta", t_end - t_begin)
 
-
+  t_begin = time.time()
   dx_dxi_1D   = array_3D_to_1D(xi, eta, zeta, num_cell, dx_dxi)
   dy_dxi_1D   = array_3D_to_1D(xi, eta, zeta, num_cell, dy_dxi)
   dz_dxi_1D   = array_3D_to_1D(xi, eta, zeta, num_cell, dz_dxi)
@@ -119,7 +124,8 @@ def jacobian_of_grid_3d(xi, eta, zeta, num_cell, cell_center, \
   dx_dzeta_1D = array_3D_to_1D(xi, eta, zeta, num_cell, dx_dzeta)
   dy_dzeta_1D = array_3D_to_1D(xi, eta, zeta, num_cell, dy_dzeta)
   dz_dzeta_1D = array_3D_to_1D(xi, eta, zeta, num_cell, dz_dzeta)
-  print("DEBUG array_3D_to_1D", time.time()-t0)
+  t_end = time.time()
+  print("DEBUG jacobian array_3D_to_1D", t_end -t_begin)
 
   jacobian = np.zeros([3, 3, num_cell])
 
@@ -128,6 +134,7 @@ def jacobian_of_grid_3d(xi, eta, zeta, num_cell, cell_center, \
   # j20 = dzeta / dx, j21 = dzeta / dy, j22 = dzeta/dz,
   #ivanComment Calculating det at once to be able to use slicing of numpy
   #ivanComment arrays rather than for-loops.
+  t_begin = time.time()
   det = \
     dx_dxi_1D * dy_deta_1D * dz_dzeta_1D + \
     dy_dxi_1D * dz_deta_1D * dx_dzeta_1D + \
@@ -163,7 +170,8 @@ def jacobian_of_grid_3d(xi, eta, zeta, num_cell, cell_center, \
   jacobian[2, 2, :] = \
     inv_det * (dx_dxi_1D[:]   * dy_deta_1D[:] - \
                dx_deta_1D[:]  * dy_dxi_1D[:])
-  print("DEBUG jacobian", time.time()-t0)
+  t_end = time.time()
+  print("DEBUG creating jacobian", t_end - t_begin)
 
   # print('shape of jacobian', jacobian.shape)
   return(jacobian)
@@ -222,7 +230,7 @@ def derivative(var, xi, eta, zeta, jacobian, accuracy):
 def derivative_3d(var, xi, eta, zeta, num_cell, jacobian, accuracy_x, \
       accuracy_y, accuracy_z):
 
-  t0 = time.time()
+  t_begin = time.time()
 
   # structure of input is [num_xi, num_eta, num_zeta, num_dof]
   # structure of output is [num_cell, num_dof]
@@ -244,7 +252,9 @@ def derivative_3d(var, xi, eta, zeta, num_cell, jacobian, accuracy_x, \
   # var_zeta = [i_zeta, (num_dof*num_xi)*i_eta + (num_dof)*i_xi + i_dof)]
   var_zeta = np.reshape(var.transpose(2, 1, 0, 3),
                         (num_zeta, num_xi * num_eta * num_dof))
-
+  t_end = time.time()
+  print("DEBUG reshaping arrays for derivative calculation", t_end - t_begin)
+  
   d_dxi = findiff.FinDiff(0, xi_delta, acc=accuracy_x)
   d_deta = findiff.FinDiff(0, eta_delta, acc=accuracy_y)
   d_dzeta = findiff.FinDiff(0, zeta_delta, acc=accuracy_z)
@@ -252,17 +262,20 @@ def derivative_3d(var, xi, eta, zeta, num_cell, jacobian, accuracy_x, \
   dvar_dxi = np.zeros([num_xi, num_eta*num_zeta*num_dof])
   for i_xi_dof in range(num_eta*num_zeta*num_dof):
     dvar_dxi[:,i_xi_dof] =  d_dxi(var_xi[:,i_xi_dof])
-  print("DEBUG derivative_3D dvar_dxi", time.time()-t0)
+  t_dxi = time.time()
+  print("DEBUG derivative_3D dvar_dxi", t_dxi - t_end)
 
   dvar_deta = np.zeros([num_eta, num_xi * num_zeta * num_dof])
   for i_eta_dof in range(num_xi * num_zeta * num_dof):
     dvar_deta[:,i_eta_dof] = d_deta(var_eta[:, i_eta_dof])
-  print("DEBUG derivative_3D dvar_deta", time.time()-t0)
+  t_deta = time.time()
+  print("DEBUG derivative_3D dvar_deta", t_deta - t_dxi)
 
   dvar_dzeta = np.zeros([num_zeta, num_xi * num_eta * num_dof])
   for i_zeta_dof in range(num_xi * num_eta * num_dof):
     dvar_dzeta[:,i_zeta_dof] = d_dzeta(var_zeta[:, i_zeta_dof])
-  print("DEBUG derivative_3D dvar_dzeta", time.time()-t0)
+  t_dzeta = time.time()
+  print("DEBUG derivative_3D dvar_dzeta", t_dzeta - t_deta)
 
   # reshape derivative to 3d
   # var_xi = [i_xi, (num_dof*num_zeta)*i_eta + (num_dof)*i_zeta + i_dof)]
@@ -281,6 +294,7 @@ def derivative_3d(var, xi, eta, zeta, num_cell, jacobian, accuracy_x, \
   dvar_dzeta_1D = np.zeros([num_cell, num_dof])
 
   #donyaFuture change this from 2 loops of n_dim and n_snap to one loop of n_dof
+  t_begin = time.time()
   for i_dof in range(num_dof):
     dvar_dxi_1D[:,i_dof]    = \
       array_3D_to_1D(xi, eta, zeta, num_cell, dvar_dxi[:, :, :, i_dof])
@@ -288,7 +302,8 @@ def derivative_3d(var, xi, eta, zeta, num_cell, jacobian, accuracy_x, \
       array_3D_to_1D(xi, eta, zeta, num_cell, dvar_deta[:, :, :, i_dof])
     dvar_dzeta_1D[:, i_dof] = \
       array_3D_to_1D(xi, eta, zeta, num_cell, dvar_dzeta[:, :, :, i_dof])
-  print("DEBUG array_3D_to_1D", time.time()-t0)
+  t_end = time.time()
+  print("DEBUG array_3D_to_1D", t_end - t_begin)
 
   #donyaFuture change this from 2 loops of n_dim and n_snap to one loop of n_dof
   # dvar/dx = dvar/dxi*dxi/dx + dvar/deta*deta/dx
@@ -298,6 +313,7 @@ def derivative_3d(var, xi, eta, zeta, num_cell, jacobian, accuracy_x, \
   dvar_dx = np.zeros([num_cell, num_dof])
   dvar_dy = np.zeros([num_cell, num_dof])
   dvar_dz = np.zeros([num_cell, num_dof])
+  t_begin = time.time()
   for i_dof in range(num_dof):
     dvar_dx[:, i_dof] = \
       dvar_dxi_1D[:, i_dof]   * jacobian[0, 0, :] + \
@@ -311,6 +327,8 @@ def derivative_3d(var, xi, eta, zeta, num_cell, jacobian, accuracy_x, \
       dvar_dxi_1D[:, i_dof]   * jacobian[0, 2, :] + \
       dvar_deta_1D[:, i_dof]  * jacobian[1, 2, :] + \
       dvar_dzeta_1D[:, i_dof] * jacobian[2, 2, :]
-  print("DEBUG dvar_dx,y,z", time.time()-t0)
+
+  t_end = time.time()
+  print("DEBUG jacobian into dvar-dx,y,z", t_end - t_begin)
 
   return(dvar_dx, dvar_dy, dvar_dz)
