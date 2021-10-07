@@ -19,6 +19,9 @@ import argparse
 import libconf
 import findiff
 import matplotlib.pyplot as plt
+import time
+import numba
+
 try:
   from tqdm import tqdm
 except:
@@ -159,6 +162,42 @@ def main(argv=None):
   for i_dim in range(num_dim):
     weights_ND[i_dim*num_cell : (i_dim+1)*num_cell] = cell_volume
     
+  #ivanDebug
+  #mesh_xi_eta_zeta_ranges = \
+  #  [mesh_xi_index_min, mesh_xi_index_max,
+  #   mesh_eta_index_min, mesh_eta_index_max,
+  #   mesh_zeta_index_min, mesh_zeta_index_max]
+  xi_relative_array   = xi   - mesh_xi_index_min
+  eta_relative_array  = eta  - mesh_eta_index_min
+  zeta_relative_array = zeta - mesh_zeta_index_min
+  Nxi   = max(xi_relative_array)   - min(xi_relative_array)   + 1
+  Neta  = max(eta_relative_array)  - min(eta_relative_array)  + 1
+  Nzeta = max(zeta_relative_array) - min(zeta_relative_array) + 1
+
+  #print("DEBUG numba", numba.config.NUMBA_DEFAULT_NUM_THREADS)
+  #print("DEBUG", cell_centroid_3D.shape)
+  ## Get range of mesh_index_xi_array,eta,zeta
+  #cell_volume_3D = cell_volume.reshape((num_xi, num_eta, num_zeta))
+  #t_begin = time.time()
+  #num_iter = 2
+  #for idx in range(num_iter):
+  #  cell_volume_1D = arr_conv.array_3D_to_1D(\
+  #          xi_relative_array,
+  #          eta_relative_array,
+  #          zeta_relative_array,
+  #          num_cell,
+  #          cell_volume_3D)
+  #  tmp_cell_volume_3D = arr_conv.array_1D_to_3D(\
+  #          xi_relative_array,
+  #          eta_relative_array,
+  #          zeta_relative_array,
+  #          num_cell,
+  #          Nxi, Neta, Nzeta,
+  #          cell_volume_1D)
+  #t_end = time.time()
+  #print("t_end", t_end-t_begin)
+  #exit(1)
+  ##ivanDebugEnd
 
   # ---------------------------------------------------------------------------
   # POD
