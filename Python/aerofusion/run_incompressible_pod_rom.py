@@ -188,7 +188,7 @@ def main(argv=None):
   #          num_cell,
   #          cell_volume_3D)
   #  tmp_cell_volume_3D = arr_conv.array_1D_to_3D(\
-  #          xi_relative_array,
+  #          xi_relative_array,]
   #          eta_relative_array,
   #          zeta_relative_array,
   #          num_cell,
@@ -335,7 +335,11 @@ def main(argv=None):
              phi = phi,
              pod_lambda = pod_lambda,
              modal_coeff = modal_coeff,
-             velocity_mean = velocity_mean)
+             velocity_mean = velocity_mean,
+             Nxi = Nxi, Neta = Neta, Nzeta = Nzeta,\
+             xi_relative_array = xi_relative_array,\
+             eta_relative_array = eta_relative_array, \
+             zeta_relative_array = zeta_relative_array)
   #import ipdb
   #ipdb.set_trace()
   # ---------------------------------------------------------------------------
@@ -351,6 +355,12 @@ def main(argv=None):
     pod_lambda            = pod_data['pod_lambda']
     phi                   = pod_data['phi']
     modal_coeff           = pod_data['modal_coeff']
+    Nxi                   = pod_data['Nxi']
+    Neta                  = pod_data['Neta']
+    Nzeta                 = pod_data['Nzeta']
+    xi_relative_array     = pod_data['xi_relative_array']
+    eta_relative_array    = pod_data['eta_relative_array']
+    zeta_relative_array   = pod_data['zeta_relative_array']
 
     num_dim  = options.num_dimensions
     num_cell = len(velocity_mean)//num_dim
@@ -363,13 +373,14 @@ def main(argv=None):
       velocity_0 = np.zeros([num_xi, num_eta, num_zeta, num_dim])
       for i_dim in range(num_dim):
         velocity_0[:,:,:,i_dim] = arr_conv.array_1D_to_3D(\
-          xi, eta, zeta, num_cell, velocity_mean[:,i_dim])
+          xi_relative_array, eta_relative_array, zeta_relative_array, \
+           Nxi, Neta, Nzeta, velocity_mean[:,i_dim]) 
       
     print(' - Calculation of Jacobian')
     jacobian = curvder.jacobian_of_grid_3d(\
-       xi,
-       eta,
-       zeta,
+       xi_relative_array,
+       eta_relative_array,
+       zeta_relative_array,
        num_cell,
        cell_centroid_3D,
        options.rom.jacobian.order_derivatives_x,
@@ -378,9 +389,9 @@ def main(argv=None):
     print(' - Calculation of ROM matrices')
     (L0_calc, LRe_calc, C0_calc, CRe_calc, Q_calc) = \
        incrom.pod_rom_matrices_3d(\
-         xi,
-         eta,
-         zeta,
+         xi_relative_array,
+         eta_relative_array,
+         zeta_relative_array,
          cell_centroid_3D,
          num_cell,
          phi,

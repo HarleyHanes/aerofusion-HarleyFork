@@ -257,11 +257,14 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
   t_begin = time.time()
   for i_dim in range(num_dim):
     dvel_dx_3D[:,:,:,i_dim] = arr_conv.array_1D_to_3D \
-      (xi_index, eta_index, zeta_index, num_cell, dvel_dx_1D[:,i_dim])
+      (xi_index, eta_index, zeta_index,\
+        num_xi, num_eta, num_zeta, dvel_dx_1D[:,i_dim])
     dvel_dy_3D[:, :, :, i_dim] = arr_conv.array_1D_to_3D \
-      (xi_index, eta_index, zeta_index, num_cell, dvel_dy_1D[:, i_dim])
+      (xi_index, eta_index, zeta_index, \
+        num_xi, num_eta, num_zeta, dvel_dy_1D[:, i_dim])
     dvel_dz_3D[:, :, :, i_dim] = arr_conv.array_1D_to_3D \
-      (xi_index, eta_index, zeta_index, num_cell, dvel_dz_1D[:, i_dim])
+      (xi_index, eta_index, zeta_index, \
+        num_xi, num_eta, num_zeta, dvel_dz_1D[:, i_dim])
   t_end = time.time()
   print('DEBUG in matrices cal: reconstructing dvel', t_end - t_begin)
  
@@ -313,7 +316,8 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
   phi_3D = np.zeros([num_xi, num_eta, num_zeta, num_dof])
   for i_dof in range(num_dof):
     phi_3D[:, :, :, i_dof] = arr_conv.array_1D_to_3D(\
-      xi_index, eta_index, zeta_index, num_cell, phi_1D[:, i_dof])
+      xi_index, eta_index, zeta_index, num_xi, num_eta, num_zeta, \
+       phi_1D[:, i_dof])
   t_end = time.time()
   print('DEBUG in matrices calc: reshaping and reconstructing phi', \
          t_end-t_begin)
@@ -334,11 +338,14 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
        accuracy_x, accuracy_y, accuracy_z)
   for i_dof in range(num_dof):
     dphidx_3D[:,:,:,i_dof] = arr_conv.array_1D_to_3D \
-      (xi_index, eta_index, zeta_index, num_cell, dphidx_1D[:,i_dof])
+      (xi_index, eta_index, zeta_index, num_xi, num_eta, num_zeta,\
+        dphidx_1D[:,i_dof])
     dphidy_3D[:, :, :, i_dof] = arr_conv.array_1D_to_3D \
-      (xi_index, eta_index, zeta_index, num_cell, dphidy_1D[:, i_dof])
+      (xi_index, eta_index, zeta_index, num_xi, num_eta, num_zeta, \
+        dphidy_1D[:, i_dof])
     dphidz_3D[:, :, :, i_dof] = arr_conv.array_1D_to_3D \
-      (xi_index, eta_index, zeta_index, num_cell, dphidz_1D[:, i_dof])
+      (xi_index, eta_index, zeta_index, num_xi, num_eta, num_zeta, \
+        dphidz_1D[:, i_dof])
 
   (ddphidx2_1D, nul, nul) = curvder.derivative_3d \
     (dphidx_3D, xi_index, eta_index, zeta_index, num_cell, jacobian,\
