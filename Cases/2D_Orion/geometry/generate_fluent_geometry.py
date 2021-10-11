@@ -260,13 +260,35 @@ def main(argv=None):
               radius_CD * np.array([np.cos(beta_BQ), np.sin(beta_BQ), 0.0])
     print("beta_BQ", np.rad2deg(beta_BQ))
     points_C2_D2.append(point_Q)
- # points_C1_D1.append(center_CD)
- # print("point_C1", point_C1, "vs", point_C1_prime, "vs", points_C2_C1[-1])
- # print("point_C2", point_C2, "vs", points_C2_C1[0])
-  # creating dictionary of all the  8 points to store all the point in a sequence
-  #  probe_points = {"p1" : point_A, "p2": point_E1, "p3": point_D1, \
-  #                   "p4": point_C1, "p5": point_B, "p6": point_C2, \
-  #                     "p7": point_D2, "p8": point_E2} 
+ 
+# line E-D
+  number_of_points_DE = mesh_options["geometry"]["number_of_points_DE"]
+  angel_ED = np.arctan((point_D1[1] - point_E1[1])/(point_D1[0] - point_E1[0]))
+  length_E_D = np.sqrt((point_D1[1] - point_E1[1])**2 + \
+                 (point_D1[0]-point_E1[0])**2)
+  points_D1_E1 = []
+  points_D2_E2 = []
+  for idx in range(number_of_points_DE):    
+      length_D_Q = idx * length_E_D /(number_of_points_DE - 1)
+      point_Q =  np.array([point_D1[0], point_D1[1], 0.0]) - \
+                   length_D_Q *\
+                     np.array([np.cos(angel_ED), np.sin(angel_ED), 0.0]) 
+      points_D1_E1.append(point_Q)
+      points_D2_E2.append(np.array([point_Q[0], -point_Q[1], 0.0]))
+
+
+# line EA
+  number_of_points_EA = mesh_options["geometry"]["number_of_points_EA"]
+  length_EA = mesh_options["geometry"]["length_AE"]
+  points_E1_A = []
+  points_E2_A = []
+  for idx in range(number_of_points_EA):   
+      length_EQ = idx * length_EA /(number_of_points_EA - 1)
+      point_Q =  point_E1 - np.array([0.0, length_EQ, 0.0]) 
+      points_E1_A.append(point_Q)
+      points_E2_A.append(np.array([point_Q[0], -point_Q[1], 0.0]))
+  import ipdb 
+  ipdb.set_trace()
 
   probe_points = []
   probe_points.append(point_A)
