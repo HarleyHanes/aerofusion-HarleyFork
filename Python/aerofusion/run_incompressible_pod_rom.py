@@ -348,6 +348,7 @@ def main(argv=None):
   if "rom" in options:
 
     print("Loading POD data from file", pod_data_filename)
+    print("In develop branch")
     pod_data = np.load(pod_data_filename)
     # Assign data to convenience variables
     velocity_mean         = pod_data['velocity_mean']
