@@ -332,10 +332,17 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
   ddphidy2_1D = np.zeros([num_cell, num_dof])
   ddphidz2_1D = np.zeros([num_cell, num_dof])
 
-  print('Calculating derivative of phi')
+  print('Calculating derivative of phi--- in develop branch')
+  ####---------DEBUG-------------------------
+  np.savez('phi_3D_develop.npz', phi_3D = phi_3D)
+  #####----------------------------------------------
   (dphidx_1D, dphidy_1D, dphidz_1D) = curvder.derivative_3d \
     (phi_3D, xi_index, eta_index, zeta_index, num_cell, jacobian,\
        accuracy_x, accuracy_y, accuracy_z)
+  ####---------DEBUG-------------------------
+  np.savez('dphi_1D_develop.npz', dphidx_1D = dphidx_1D, dphidy_1D = dphidy_1D,\
+                          dphidz_1D = dphidz_1D)
+  #####----------------------------------------------
   for i_dof in range(num_dof):
     dphidx_3D[:,:,:,i_dof] = arr_conv.array_1D_to_3D \
       (xi_index, eta_index, zeta_index, num_xi, num_eta, num_zeta,\
@@ -347,6 +354,12 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
       (xi_index, eta_index, zeta_index, num_xi, num_eta, num_zeta, \
         dphidz_1D[:, i_dof])
 
+  ####---------DEBUG-------------------------
+  np.savez('dphi_3D_develop.npz', dphidx_3D = dphidx_3D, dphidy_3D = dphidy_3D,\
+                          dphidz_3D = dphidz_3D)
+  print('matrices saved in develop branch')
+  exit(1)
+  ####--------------------------------------------------
   (ddphidx2_1D, nul, nul) = curvder.derivative_3d \
     (dphidx_3D, xi_index, eta_index, zeta_index, num_cell, jacobian,\
        accuracy_x, accuracy_y, accuracy_z)
@@ -488,7 +501,7 @@ def pod_rom_2basis_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
 
 
   ##-------derivative on curvilinear grid-----------
-  print('Calculating derivative of velocity')
+  print('Calculating derivative of velocity-- in develop branch')
   dvel_dx_1D = np.zeros([num_cell, num_dim])
   dvel_dy_1D = np.zeros([num_cell, num_dim])
   dvel_dz_1D = np.zeros([num_cell, num_dim])
@@ -573,7 +586,7 @@ def pod_rom_2basis_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
   ddphidy2_1D = np.zeros([num_cell, num_dof_phi])
   ddphidz2_1D = np.zeros([num_cell, num_dof_phi])
 
-  print('Calculating derivative of phi')
+  print('Calculating derivative of phi --- develop branch')
   (dphidx_1D, dphidy_1D, dphidz_1D) = curvder.derivative_3d \
     (phi_3D, xi_index, eta_index, zeta_index, num_cell, jacobian, accuracy)
   for i_dof in range(num_dof_phi):
@@ -584,6 +597,7 @@ def pod_rom_2basis_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
     dphidz_3D[:, :, :, i_dof] = arr_conv.array_1D_to_3D \
       (xi_index, eta_index, zeta_index, num_cell, dphidz_1D[:, i_dof])
 
+  #####----------------------------------------------
   (ddphidx2_1D, nul, nul) = curvder.derivative_3d \
     (dphidx_3D, xi_index, eta_index, zeta_index, num_cell, jacobian, accuracy)
   (nul, ddphidy2_1D, nul) = curvder.derivative_3d \

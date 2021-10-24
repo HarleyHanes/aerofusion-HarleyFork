@@ -384,9 +384,9 @@ def main(argv=None):
        zeta_relative_array,
        num_cell,
        cell_centroid_3D,
-       options.rom.jacobian.order_derivatives_x,
-       options.rom.jacobian.order_derivatives_y,
-       options.rom.jacobian.order_derivatives_z)
+       options.rom.derivatives.order_x,
+       options.rom.derivatives.order_y,
+       options.rom.derivatives.order_z)
     print(' - Calculation of ROM matrices')
     (L0_calc, LRe_calc, C0_calc, CRe_calc, Q_calc) = \
        incrom.pod_rom_matrices_3d(\
@@ -399,9 +399,9 @@ def main(argv=None):
          weights_ND,
          velocity_0,
          jacobian,
-         options.rom.jacobian.order_derivatives_x,
-         options.rom.jacobian.order_derivatives_y, 
-         options.rom.jacobian.order_derivatives_z)
+         options.rom.derivatives.order_x,
+         options.rom.derivatives.order_y, 
+         options.rom.derivatives.order_z)
     print(' - Saving matrices to file', rom_matrices_filename)
     np.savez(rom_matrices_filename,
               L0_calc  = L0_calc,
