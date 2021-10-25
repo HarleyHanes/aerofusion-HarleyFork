@@ -253,7 +253,13 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
   dvel_dx_3D = np.zeros([num_xi, num_eta, num_zeta, num_dim])
   dvel_dy_3D = np.zeros([num_xi, num_eta, num_zeta, num_dim])
   dvel_dz_3D = np.zeros([num_xi, num_eta, num_zeta, num_dim])
-  
+ 
+  ####-------DEBUG-------------
+  np.savez('dvel_1D_s.npz', dveldx_1D = dvel_dx_1D, dveldy_1D = dvel_dy_1D, \
+            dveldz_1D = dvel_dz_1D)
+  print('dvel 1D is saved')
+  #################################
+ 
   t_begin = time.time()
   for i_dim in range(num_dim):
     dvel_dx_3D[:,:,:,i_dim] = arr_conv.array_1D_to_3D \
@@ -266,6 +272,12 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
       (xi_index, eta_index, zeta_index, \
         num_xi, num_eta, num_zeta, dvel_dz_1D[:, i_dim])
   t_end = time.time()
+  ####-------DEBUG-------------
+  np.savez('dvel_3D_s.npz', dveldx_3D = dvel_dx_3D, dveldy_3D = dvel_dy_3D, \
+            dveldz_3D = dvel_dz_3D)
+  print('dvel 3D is saved')
+  exit(1)
+  #################################
   print('DEBUG in matrices cal: reconstructing dvel', t_end - t_begin)
  
   (ddvel_dx2_1D, nul, nul) = curvder.derivative_3d \
