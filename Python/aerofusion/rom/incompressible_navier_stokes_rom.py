@@ -254,11 +254,6 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
   dvel_dy_3D = np.zeros([num_xi, num_eta, num_zeta, num_dim])
   dvel_dz_3D = np.zeros([num_xi, num_eta, num_zeta, num_dim])
  
-  ####-------DEBUG-------------
-  np.savez('dvel_1D_s.npz', dveldx_1D = dvel_dx_1D, dveldy_1D = dvel_dy_1D, \
-            dveldz_1D = dvel_dz_1D)
-  print('dvel 1D is saved')
-  #################################
  
   t_begin = time.time()
   for i_dim in range(num_dim):
@@ -272,12 +267,6 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
       (xi_index, eta_index, zeta_index, \
         num_xi, num_eta, num_zeta, dvel_dz_1D[:, i_dim])
   t_end = time.time()
-  ####-------DEBUG-------------
-  np.savez('dvel_3D_s.npz', dveldx_3D = dvel_dx_3D, dveldy_3D = dvel_dy_3D, \
-            dveldz_3D = dvel_dz_3D)
-  print('dvel 3D is saved')
-  exit(1)
-  #################################
   print('DEBUG in matrices cal: reconstructing dvel', t_end - t_begin)
  
   (ddvel_dx2_1D, nul, nul) = curvder.derivative_3d \
@@ -345,16 +334,9 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
   ddphidz2_1D = np.zeros([num_cell, num_dof])
 
   print('Calculating derivative of phi--- in develop branch')
-#  ####---------DEBUG-------------------------
-#  np.savez('phi_3D_develop.npz', phi_3D = phi_3D)
-#  #####----------------------------------------------
   (dphidx_1D, dphidy_1D, dphidz_1D) = curvder.derivative_3d \
     (phi_3D, xi_index, eta_index, zeta_index, num_cell, jacobian,\
        accuracy_x, accuracy_y, accuracy_z)
-#  ####---------DEBUG-------------------------
-#  np.savez('dphi_1D_develop.npz', dphidx_1D = dphidx_1D, dphidy_1D = dphidy_1D,\
-#                          dphidz_1D = dphidz_1D)
-#  #####----------------------------------------------
   for i_dof in range(num_dof):
     dphidx_3D[:,:,:,i_dof] = arr_conv.array_1D_to_3D \
       (xi_index, eta_index, zeta_index, num_xi, num_eta, num_zeta,\
@@ -366,12 +348,6 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
       (xi_index, eta_index, zeta_index, num_xi, num_eta, num_zeta, \
         dphidz_1D[:, i_dof])
 
-  ####---------DEBUG-------------------------
- # np.savez('dphi_3D_develop.npz', dphidx_3D = dphidx_3D, dphidy_3D = dphidy_3D,\
- #                         dphidz_3D = dphidz_3D)
- # print('matrices saved in develop branch')
- # exit(1)
- # ####--------------------------------------------------
   (ddphidx2_1D, nul, nul) = curvder.derivative_3d \
     (dphidx_3D, xi_index, eta_index, zeta_index, num_cell, jacobian,\
        accuracy_x, accuracy_y, accuracy_z)
@@ -382,10 +358,6 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
     (dphidz_3D, xi_index, eta_index, zeta_index, num_cell, jacobian,\
        accuracy_x, accuracy_y, accuracy_z)
 
-  ####---------DEBUG-------------------------
-  np.savez('dphi_1D_final_develop.npz', dphidx_1D = dphidx_1D, dphidy_1D = dphidy_1D,\
-                          dphidz_1D = dphidz_1D)
-  ####--------------------------------------------------
   print('Reconstructing derivative of phi')
   t_begin = time.time()
   dphi_dx_1D = np.reshape(dphidx_1D, (num_cell, num_dim, num_snapshots))
@@ -395,10 +367,6 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
   ddphi_dy2_1D = np.reshape(ddphidy2_1D, (num_cell, num_dim, num_snapshots))
   ddphi_dz2_1D = np.reshape(ddphidz2_1D, (num_cell, num_dim, num_snapshots))
 
-  ####---------DEBUG-------------------------
-  np.savez('dphi_1D_reshape_develop.npz', dphidx_1D = dphi_dx_1D, dphidy_1D =
-            dphi_dy_1D, dphidz_1D = dphi_dz_1D)
-  ####--------------------------------------------------
   # reconstructing to have the shape of
   # dphi_d_1D = [(num_cell*i_dim)+i_cell, i_snap]
   dphi_dx_1D = np.reshape(\
@@ -413,31 +381,10 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
     ddphi_dy2_1D.transpose(1, 0, 2), (num_cell * num_dim, num_snapshots))
   ddphi_dz2_1D = np.reshape(\
     ddphi_dz2_1D.transpose(1, 0, 2), (num_cell * num_dim, num_snapshots))
-  ####---------DEBUG-------------------------
-  np.savez('dphi_1D_reshape_develop_2.npz', dphidx_1D = dphi_dx_1D, dphidy_1D =
-            dphi_dy_1D, dphidz_1D = dphi_dz_1D)
-
-  print('debug matrices are saved')
-  exit(1)
-  ####--------------------------------------------------
   t_end = time.time()
   print('DEBUG in matrices calc: reshaping dphi', t_end - t_begin)
   phi_transpose_by_weight = np.multiply(phi.transpose(), weights)
-  ####DEBUG
-  np.savez('matrices_param_orig.npz', dveldx_1D = dvel_dx_1D,\
-            dveldy_1D = dvel_dy_1D, dveldz_1D = dvel_dz_1D,\
-            ddvelddx_1D = ddvel_dx2_1D, 
-            ddvelddy_1D = ddvel_dy2_1D, 
-            ddvelddz_1D = ddvel_dz2_1D,
-            dphidx_1D = dphi_dx_1D,
-            dphidy_1D = dphi_dy_1D,
-            dphidz_1D = dphi_dz_1D,
-            ddphiddx_1D = ddphi_dx2_1D,
-            ddphiddy_1D = ddphi_dy2_1D,
-            ddphiddz_1D = ddphi_dz2_1D)
 
-  print('matrices parameters are saved')
-  exit(1)
   print('Calculating C0')
   t_begin = time.time()
   C0 = - np.matmul(phi_transpose_by_weight,
