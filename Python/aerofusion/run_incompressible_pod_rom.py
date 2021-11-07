@@ -225,7 +225,7 @@ def main(argv=None):
     velocity_1D_compact = np.zeros([num_cell*num_dim, num_snapshots])
     # Loop in timesteps to obtain the snapshot matrix U
     for tdx, time_step in enumerate(tqdm(list_of_time_steps)):
-
+      print('tdx', tdx)
       time_step_str = str(time_step)
       input_solution_fields_filename = \
         options["io"]["snapshot_data_filename_prefix"] + \
@@ -259,18 +259,30 @@ def main(argv=None):
 
     mean_reduced_velocity = np.zeros(velocity_1D_compact.shape)
     for i_mode in range(num_snapshots):
+      print('num-sna in mean-reduced-velocity', i_mode)
       mean_reduced_velocity[:,i_mode] = \
         velocity_1D_compact[:,i_mode] - velocity_mean[:]
-    
-    print('Calculating', options.pod.num_modes, 'POD modes')
+   
+    print('finidng number of modes')
+    num_of_modes = pod_modes.find_number_of_modes(\
+        mean_reduced_velocity,
+        weights_ND,
+        0.9)
+    print('Calculating', num_of_modes, 'POD modes')
     (phi, modal_coeff, pod_lambda) = pod_modes.Find_Modes(\
         mean_reduced_velocity,
         weights_ND,
-        options.pod.num_modes)
+        num_of_modes)
     
+   # print('Calculating', options.pod.num_modes, 'POD modes')
+   # (phi, modal_coeff, pod_lambda) = pod_modes.Find_Modes(\
+   #     mean_reduced_velocity,
+   #     weights_ND,
+   #     options.pod.num_modes)
+   # 
     #--------------------------------------------------------------------------
     print('phi, lambda', phi.shape, pod_lambda.shape)
-    num_modes = options.pod.num_modes 
+   # num_modes = options.pod.num_modes 
    ###---visualizing modes
    # phi_1D = np.zeros([num_cell, num_dim, num_modes]) 
    # for i_mode in range(num_modes):
@@ -336,12 +348,13 @@ def main(argv=None):
              pod_lambda = pod_lambda,
              modal_coeff = modal_coeff,
              velocity_mean = velocity_mean,
-             Nxi = Nxi, Neta = Neta, Nzeta = Nzeta,\
+             num_xi = Nxi, num_eta = Neta, num_zeta = Nzeta,\
              xi_relative_array = xi_relative_array,\
              eta_relative_array = eta_relative_array, \
              zeta_relative_array = zeta_relative_array)
   #import ipdb
   #ipdb.set_trace()
+  exit(1)
   # ---------------------------------------------------------------------------
   # ROM
   # ---------------------------------------------------------------------------
@@ -433,7 +446,8 @@ def main(argv=None):
            integration_times)
     mean_reduced_velocity_rom = np.matmul(phi, aT)
     # Save the output
-  
+    print('saving aT and phi')
+    np.savez('aT.npz', aT = aT , phi = phi) 
 #------------------------------------------------------------------------------
 if __name__ == "__main__":
   sys.exit(main())
