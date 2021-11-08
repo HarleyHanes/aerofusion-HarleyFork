@@ -354,7 +354,7 @@ def main(argv=None):
              zeta_relative_array = zeta_relative_array)
   #import ipdb
   #ipdb.set_trace()
-  exit(1)
+ # exit(1)
   # ---------------------------------------------------------------------------
   # ROM
   # ---------------------------------------------------------------------------
@@ -447,7 +447,7 @@ def main(argv=None):
     mean_reduced_velocity_rom = np.matmul(phi, aT)
     # Save the output
     print('saving aT and phi')
-    np.savez('aT.npz', aT = aT , phi = phi) 
+    np.savez('aT.npz', aT = aT , phi = phi, modal_coeff =modal_coeff ) 
 #------------------------------------------------------------------------------
 if __name__ == "__main__":
   sys.exit(main())
