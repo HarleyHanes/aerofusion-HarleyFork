@@ -21,6 +21,8 @@ import findiff
 import matplotlib.pyplot as plt
 import time
 import numba
+import memory_profiler as mem_profile
+import gc
 
 try:
   from tqdm import tqdm
@@ -173,6 +175,8 @@ def main(argv=None):
   Nxi   = max(xi_relative_array)   - min(xi_relative_array)   + 1
   Neta  = max(eta_relative_array)  - min(eta_relative_array)  + 1
   Nzeta = max(zeta_relative_array) - min(zeta_relative_array) + 1
+  mem_reading_mesh = np.asarray(mem_profile.memory_usage())
+  print('mem_reading_mesh', mem_reading_mesh)
 
   #print("DEBUG numba", numba.config.NUMBA_DEFAULT_NUM_THREADS)
   #print("DEBUG", cell_centroid_3D.shape)
@@ -198,7 +202,7 @@ def main(argv=None):
   #print("t_end", t_end-t_begin)
   #exit(1)
   ##ivanDebugEnd
-
+ 
   # ---------------------------------------------------------------------------
   # POD
   # ---------------------------------------------------------------------------
@@ -352,6 +356,8 @@ def main(argv=None):
              xi_relative_array = xi_relative_array,\
              eta_relative_array = eta_relative_array, \
              zeta_relative_array = zeta_relative_array)
+  mem_pod = np.asarray(mem_profile.memory_usage())
+  print('mem_pod', mem_pod)
   #import ipdb
   #ipdb.set_trace()
  # exit(1)
@@ -375,6 +381,9 @@ def main(argv=None):
     xi_relative_array     = pod_data['xi_relative_array']
     eta_relative_array    = pod_data['eta_relative_array']
     zeta_relative_array   = pod_data['zeta_relative_array']
+
+    mem_pod_data = np.asarray(mem_profile.memory_usage())
+    print('mem_pod_data', mem_pod_data)
 
     num_dim  = options.num_dimensions
     num_cell = len(velocity_mean)//num_dim
@@ -415,6 +424,8 @@ def main(argv=None):
          options.rom.derivatives.order_x,
          options.rom.derivatives.order_y, 
          options.rom.derivatives.order_z)
+    mem_matrices_calc = np.asarray(mem_profile.memory_usage())
+    print('mem_matrices_calc', mem_matrices_calc)
     print(' - Saving matrices to file', rom_matrices_filename)
     np.savez(rom_matrices_filename,
               L0_calc  = L0_calc,
@@ -423,14 +434,14 @@ def main(argv=None):
               CRe_calc = CRe_calc,
               Q_calc   = Q_calc)
 
-   # print('Reading matrices from file', rom_matrices_filename)
-   # matrices = np.load(rom_matrices_filename)
-   # L0_calc  = matrices['L0_calc']
-   # LRe_calc = matrices['LRe_calc']
-   # C0_calc  = matrices['C0_calc']
-   # CRe_calc = matrices['CRe_calc']
-   # Q_calc   = matrices['Q_calc'
-
+#    print('Reading matrices from file', rom_matrices_filename)
+#    matrices = np.load(rom_matrices_filename)
+#    L0_calc  = matrices['L0_calc']
+#    LRe_calc = matrices['LRe_calc']
+#    C0_calc  = matrices['C0_calc']
+#    CRe_calc = matrices['CRe_calc']
+#    Q_calc   = matrices['Q_calc']
+#
     integration_times = simulation_time_array[1:]
     print('ROM RK45 integration over times', integration_times)
     char_L = 1
@@ -444,10 +455,14 @@ def main(argv=None):
            Q_calc,
            modal_coeff,
            integration_times)
-    mean_reduced_velocity_rom = np.matmul(phi, aT)
+    print('phi', phi.shape, aT.shape, modal_coeff.shape)
+   # mean_reduced_velocity_rom = np.matmul(phi, aT)
     # Save the output
     print('saving aT and phi')
     np.savez('aT.npz', aT = aT , phi = phi, modal_coeff =modal_coeff ) 
+    mem_rom = np.asarray(mem_profile.memory_usage())
+    print('mem_rom', mem_rom)
+    print(' - Saving matrices to file', rom_matrices_filename)
 #------------------------------------------------------------------------------
 if __name__ == "__main__":
   sys.exit(main())
