@@ -160,9 +160,11 @@ def main(argv=None):
   num_zeta = mesh_zeta_index_max - mesh_zeta_index_min + 1
   num_cell = cell_volume.shape[0]
   cell_centroid_3D = cell_centroid.reshape((num_xi, num_eta, num_zeta, 3))
+
   weights_ND = np.zeros([num_cell*num_dim])
   for i_dim in range(num_dim):
     weights_ND[i_dim*num_cell : (i_dim+1)*num_cell] = cell_volume
+
     
   #ivanDebug
   #mesh_xi_eta_zeta_ranges = \
@@ -266,17 +268,25 @@ def main(argv=None):
       print('num-sna in mean-reduced-velocity', i_mode)
       mean_reduced_velocity[:,i_mode] = \
         velocity_1D_compact[:,i_mode] - velocity_mean[:]
-   
-    print('finidng number of modes')
-    num_of_modes = pod_modes.find_number_of_modes(\
-        mean_reduced_velocity,
-        weights_ND,
-        0.9)
-    print('Calculating', num_of_modes, 'POD modes')
+    #######
+    print('saving mean reduced velocity')
+    np.savez('mean_reduced_vel_250snap.npz', \
+              mean_reduced_velocity = mean_reduced_velocity)
+   # exit(1)
+   #    
+    #print('finidng number of modes')
+    #num_of_modes = pod_modes.find_number_of_modes(\
+    #    mean_reduced_velocity,
+    #    weights_ND,
+    #    0.9)
+    print('Calculating', num_snapshots, 'POD modes')
     (phi, modal_coeff, pod_lambda) = pod_modes.Find_Modes(\
         mean_reduced_velocity,
         weights_ND,
-        num_of_modes)
+        num_snapshots)
+    print('saving fom pod data')
+    np.savez('pod_fom_freq100.npz', phi=phi, modal_coeff=modal_coeff, pod_lambda = pod_lambda)
+    exit(1)
     
    # print('Calculating', options.pod.num_modes, 'POD modes')
    # (phi, modal_coeff, pod_lambda) = pod_modes.Find_Modes(\
