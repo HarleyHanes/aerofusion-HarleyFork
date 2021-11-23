@@ -381,6 +381,17 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
     ddphi_dy2_1D.transpose(1, 0, 2), (num_cell * num_dim, num_snapshots))
   ddphi_dz2_1D = np.reshape(\
     ddphi_dz2_1D.transpose(1, 0, 2), (num_cell * num_dim, num_snapshots))
+
+  print('saving derivative of velocity and phi')
+  np.savez('derivative_develop_branch.npz', dveldx_1D = dvel_dx_1D, 
+           dveldy_1D = dvel_dy_1D, dveldz_1D = dvel_dz_1D, 
+           ddvelddx_1D = ddvel_dx2_1D, ddvelddy_1D = ddvel_dy2_1D,
+           ddvelddz_1D =  ddvel_dz2_1D, dphidx_1D = dphi_dx_1D,
+           dphidy_1D = dphi_dy_1D, dphidz_1D = dphi_dz_1D, 
+           ddphiddx_1D = ddphi_dx2_1D, ddphiddy_1D = ddphi_dy2_1D,
+           ddphiddz_1D = ddphi_dz2_1D)
+          
+
   t_end = time.time()
   print('DEBUG in matrices calc: reshaping dphi', t_end - t_begin)
   phi_transpose_by_weight = np.multiply(phi.transpose(), weights)

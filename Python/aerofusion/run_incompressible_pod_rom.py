@@ -269,9 +269,10 @@ def main(argv=None):
       mean_reduced_velocity[:,i_mode] = \
         velocity_1D_compact[:,i_mode] - velocity_mean[:]
     #######
-    print('saving mean reduced velocity')
-    np.savez('mean_reduced_vel_250snap.npz', \
-              mean_reduced_velocity = mean_reduced_velocity)
+    ### save it later to pod variables.
+   # print('saving mean reduced velocity')
+   # np.savez('mean_reduced_vel_250snap.npz', \
+   #           mean_reduced_velocity = mean_reduced_velocity)
    # exit(1)
    #    
     #print('finidng number of modes')
@@ -279,21 +280,21 @@ def main(argv=None):
     #    mean_reduced_velocity,
     #    weights_ND,
     #    0.9)
-    print('Calculating', num_snapshots, 'POD modes')
-    (phi, modal_coeff, pod_lambda) = pod_modes.Find_Modes(\
-        mean_reduced_velocity,
-        weights_ND,
-        num_snapshots)
-    print('saving fom pod data')
-    np.savez('pod_fom_freq100.npz', phi=phi, modal_coeff=modal_coeff, pod_lambda = pod_lambda)
-    exit(1)
-    
-   # print('Calculating', options.pod.num_modes, 'POD modes')
+   # print('Calculating', num_snapshots, 'POD modes')
    # (phi, modal_coeff, pod_lambda) = pod_modes.Find_Modes(\
    #     mean_reduced_velocity,
    #     weights_ND,
-   #     options.pod.num_modes)
-   # 
+   #     num_snapshots)
+   # print('saving fom pod data')
+   # np.savez('pod_fom_freq100.npz', phi=phi, modal_coeff=modal_coeff, pod_lambda = pod_lambda)
+   # exit(1)
+    
+    print('Calculating', options.pod.num_modes, 'POD modes')
+    (phi, modal_coeff, pod_lambda) = pod_modes.Find_Modes(\
+        mean_reduced_velocity,
+        weights_ND,
+        options.pod.num_modes)
+    
     #--------------------------------------------------------------------------
     print('phi, lambda', phi.shape, pod_lambda.shape)
    # num_modes = options.pod.num_modes 
@@ -443,7 +444,7 @@ def main(argv=None):
               C0_calc  = C0_calc,
               CRe_calc = CRe_calc,
               Q_calc   = Q_calc)
-
+    exit(1)
 #    print('Reading matrices from file', rom_matrices_filename)
 #    matrices = np.load(rom_matrices_filename)
 #    L0_calc  = matrices['L0_calc']
