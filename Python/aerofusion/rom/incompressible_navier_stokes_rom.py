@@ -26,14 +26,16 @@ def pod_rom_matrices_2d(xi_index, eta_index, zeta_index, cell_center,
 
   velocity_0_1D = np.zeros([num_cell, num_dim])
   for i_dim in range(num_dim):
-    velocity_0_1D[:, i_dim] = \
-      arr_conv.array_3D_to_1D(\
-        xi_index, eta_index, zeta_index, num_cell,
-        velocity_0[:, :, :, i_dim])
+     velocity_0_1D[:, i_dim] = \
+       arr_conv.array_3D_to_1D(\
+         xi_index, eta_index, zeta_index, num_cell,
+         velocity_0[:, :, :, i_dim])
 
+
+  
   u0_ND = velocity_0_1D[:, 0]
   v0_ND = velocity_0_1D[:, 1]
-  w0_ND = velocity_0_1D[:, 2]
+  #w0_ND = velocity_0_1D[:, 2]
 
   for i_dim in range(num_dim - 1):
     u0_ND = np.append(u0_ND, velocity_0_1D[:, 0], axis=0)
@@ -55,9 +57,9 @@ def pod_rom_matrices_2d(xi_index, eta_index, zeta_index, cell_center,
     velocity_0, xi_index, eta_index, zeta_index, jacobian, accuracy)
   for i_dim in range(num_dim):
     dvel_dx_3D[:,:,:,i_dim] = arr_conv.array_1D_to_3D(\
-      xi_index, eta_index, zeta_index, num_cell, dvel_dx_1D[:,i_dim])
+      xi_index, eta_index, zeta_index, num_xi, num_eta, num_zeta , dvel_dx_1D[:,i_dim])
     dvel_dy_3D[:, :, :, i_dim] = arr_conv.array_1D_to_3D(\
-      xi_index, eta_index, zeta_index, num_cell, dvel_dy_1D[:, i_dim])
+      xi_index, eta_index, zeta_index, num_xi, num_eta, num_zeta , dvel_dy_1D[:, i_dim])
 
   (ddvel_dx2_1D, nul) = curvder.derivative(\
     dvel_dx_3D, xi_index, eta_index, zeta_index, jacobian, accuracy)
@@ -88,7 +90,7 @@ def pod_rom_matrices_2d(xi_index, eta_index, zeta_index, cell_center,
       for i_mode in range(num_snapshots):
           phi_3D[:, :, :, i_dim, i_mode] = \
             arr_conv.array_1D_to_3D(\
-              xi_index, eta_index, zeta_index, num_cell,\
+              xi_index, eta_index, zeta_index, num_xi, num_eta, num_zeta ,\
                 phi_1D[:, i_dim, i_mode])
 
   # using FD for derivative
@@ -115,14 +117,14 @@ def pod_rom_matrices_2d(xi_index, eta_index, zeta_index, cell_center,
           xi_index,
           eta_index,
           zeta_index,
-          num_cell,
+          num_xi, num_eta, num_zeta ,
           dphidx_1D[:,i_dim, i_snap])
       dphidy_3D[:, :, :, i_dim, i_snap] = \
         arr_conv.array_1D_to_3D(\
           xi_index,
           eta_index,
           zeta_index,
-          num_cell,
+          num_xi, num_eta, num_zeta ,
           dphidy_1D[:, i_dim, i_snap])
     (ddphidx2_1D[:,:,i_snap], nul) = \
       curvder.derivative(\
@@ -155,6 +157,8 @@ def pod_rom_matrices_2d(xi_index, eta_index, zeta_index, cell_center,
       np.reshape((ddphidx2_1D[:,:,i_mode]).transpose(), (num_cell * num_dim))
     ddphi_dy2_1D[:,i_mode] = \
       np.reshape((ddphidy2_1D[:,:,i_mode]).transpose(), (num_cell * num_dim))
+      
+
 
   #print('Calculating numerical C0 ')
   phi_transpose_by_weight = np.multiply(phi.transpose(), weights)
@@ -192,8 +196,90 @@ def pod_rom_matrices_2d(xi_index, eta_index, zeta_index, cell_center,
                      (np.multiply(phi_dim2_ND[:, i_mode], \
                        dphi_dy_1D.transpose())).transpose())
   print('Shape of Q', Q.shape)
+  
 
+          
   return (L0, LRe, C0, CRe, Q)
+
+def pod_rom_boundary_matrices_2d(xi_index, eta_index, zeta_index, cell_center,
+             num_cell, phi, weights, velocity_0_2D, boundary_vec):
+    
+  num_dim = 2
+  Nxi = int(np.sqrt(num_cell))
+  Neta = int(np.sqrt(num_cell))
+  #Restructure Velocity to 1D
+  velocity_0_1D = np.zeros([num_cell, num_dim])
+  for i_dim in range(num_dim):
+    velocity_0_1D[:, i_dim] = \
+      arr_conv.array_2D_to_1D(\
+        xi_index, eta_index, num_cell,
+        velocity_0_2D[:, :, i_dim])
+            
+  #Computed weighted modes 
+  phi_transpose_by_weight = np.multiply(phi.transpose(), weights)
+    
+  #Compute boundary velocities
+  boundary_2D = np.zeros((Nxi, Neta, num_dim))
+  vel_inf_2D = np.zeros((Nxi, Neta, num_dim))
+  boundary_1D = np.zeros((num_cell, num_dim))
+  vel_inf_1D = np.zeros((num_cell, num_dim))
+  vel_0_boundary_1D = np.zeros((num_cell,num_dim))
+  
+  #Create a binary matrix marking where the boundary is 
+  boundary_2D[0,:,0] = np.ones(Nxi)
+  boundary_2D[0,:,1] = np.ones(Nxi)
+  
+  #Create a matrix holding the boundary conditions
+  vel_inf_2D[0, :, 0] = boundary_vec
+  
+  #Create a matrix holding the mean boundary velocity
+  vel_0_boundary_2D=velocity_0_2D*boundary_2D
+  
+  #Change to 1-D implementations
+  for i_dim in range(num_dim):
+      vel_inf_1D[:,i_dim]= arr_conv.array_2D_to_1D(\
+               xi_index, eta_index, num_cell, vel_inf_2D[:,:,i_dim])
+      vel_0_boundary_1D[:,i_dim]= arr_conv.array_2D_to_1D(\
+               xi_index, eta_index, num_cell, vel_0_boundary_2D[:,:,i_dim])
+      boundary_1D[:,i_dim] = arr_conv.array_2D_to_1D(\
+               xi_index, eta_index, num_cell, boundary_2D[:,:,i_dim])
+          
+  #Combine Dimensions
+  vel_inf_boundary = np.reshape(vel_inf_1D, (num_dim * num_cell), order = 'F')
+  vel_0_boundary = np.reshape(vel_0_boundary_1D, (num_dim * num_cell), order = 'F')
+  boundary_binary = np.reshape(boundary_1D, (num_dim *num_cell,1), order = 'F')
+  
+
+                                           
+  # #Make binary vector of boundary conditions and formulate boundary expression
+  # vel_mean_boundary = np.zeros((phi.shape[0],))
+  # boundary_vec_phi = np.zeros((phi.shape[0],1))
+  # vel_inf_boundary = np.zeros((phi.shape[0],))
+  # n_points = np.sqrt(velocity_0_1D.shape[0]+1)
+  # for iPoints in range(velocity_0_1D.shape[0]+1):
+  #     if (iPoints % np.sqrt(n_points))==0:  #Confirm this is how indexing works
+  #         vel_mean_boundary[2*iPoints] = velocity_0_1D[iPoints,0]
+  #         vel_mean_boundary[2*iPoints+1] = velocity_0_1D[iPoints, 1]
+  #         boundary_vec_phi[2*iPoints,:] =1 
+  #         boundary_vec_phi[2*iPoints + 1,:] =1 
+  #         boundaryValue = boundaryFcn([-1+2 *(iPoints/ np.sqrt(n_points)), 0])
+  #         vel_inf_boundary[2*iPoints] = boundaryValue[0]
+  #         vel_inf_boundary[2*iPoints+1] = boundaryValue[0]
+
+    
+  #unweighted boundary modes
+  phi_unweighted_boundary = phi*boundary_binary
+    
+  #Caclulate B
+  B  = np.matmul(phi_transpose_by_weight, phi_unweighted_boundary)
+  print('Shape of B', B.shape)
+    
+  #Caclulate B0
+  B0 = np.matmul(phi_transpose_by_weight, vel_inf_boundary - vel_0_boundary)
+  print('Shape of B0', B0.shape)
+    
+  return(B, B0)
+    
 
 
 # -----------------------------------------------------------------------------
@@ -745,6 +831,22 @@ def RHS_rk45(t, a, Re, char_L, L0, LRe, C0, CRe, Q):
   print('DEBUG in RHS of rk45', t_end - t_begin)
   return rhs
 
+def RHS_rk45_boundary(t, a, Re, char_L, L0, LRe, C0, CRe, Q, B, B0, penalty):
+  #rhs = np.matmul((L0 + LRe * (2 / Re)), a) + C0 + CRe * (2 / Re)
+  #print(a.shape)
+  rhs = np.matmul((L0 + penalty * B + (LRe) * (char_L / Re)), a)\
+      + C0 + penalty * B0 + CRe * (char_L / Re)
+  num_modes = (a.shape)[0]
+  aT = np.zeros([1,num_modes])
+  aT[0,:] = a[:]
+  t_begin = time.time()  
+  #print('tau*sum*abs((B,a)+B0): ' + str(penalty*np.sum(np.abs(np.matmul(B,a)+B0))))
+  for i_modes in range(num_modes):
+    rhs[i_modes] = rhs[i_modes] + np.matmul(np.matmul(aT, Q[i_modes,:,:]), a)
+  t_end = time.time()
+  #print('DEBUG in RHS of rk45', t_end - t_begin)
+  return rhs
+
 # -----------------------------------------------------------------------------
 def rom_calc_rk45(Re, char_L, L0, LRe, C0, CRe, Q, modal_coef, t_eval):
 
@@ -774,6 +876,26 @@ def rom_calc_rk45(Re, char_L, L0, LRe, C0, CRe, Q, modal_coef, t_eval):
 #  plt.plot(aT[:, 1], '*')
 #  plt.savefig("tmp_modal_coeff_1.png")
   return (aT)
+
+def rom_calc_rk45_boundary(Re, char_L, L0, LRe, C0, CRe, Q, B, B0, modal_coef, t_eval, penalty):
+
+  from scipy import integrate
+  t_span = (t_eval[0], t_eval[len(t_eval)-1])
+  sol = \
+    integrate.solve_ivp(\
+      lambda t,
+      y: RHS_rk45_boundary(t, y, Re, char_L, L0, LRe, C0, CRe, Q, B, B0, penalty),
+      t_span,
+      modal_coef[:,0],
+      method = 'RK45',
+      t_eval = t_eval,
+      rtol = 1e-8)
+  
+  aT = sol.y
+  time = sol.t
+  #print('Time', time)
+  #print('Size of aT', aT.shape, modal_coef.shape)
+  return(aT)
 
 # -----------------------------------------------------------------------------
 def RHS_odeint(a, t, Re, char_L, L0, LRe, C0, CRe, Q):
