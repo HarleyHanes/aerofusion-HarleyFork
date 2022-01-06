@@ -103,7 +103,9 @@ def main(argv=None):
       plot_folder + 'u_reduced_pen=10^' + str(penalty_exp) +'_t= ' + str(tmax) + '.png',
       "auto",
       "auto",
-      "auto")
+      "auto",
+      colorbar_label= 'u reduced',
+      font_size = 30)
     plot_pcolormesh(\
       Xi_mesh,
       Eta_mesh,
@@ -111,7 +113,9 @@ def main(argv=None):
       plot_folder + 'v_reduced_pen=10^' + str(penalty_exp) +'_t= ' + str(tmax) + '.png',
       "auto",
       "auto",
-      "auto")
+      "auto",
+      colorbar_label= 'v reduced',
+      font_size = 30)
     for i_point in range(len(num_points)):
         point = num_points[i_point]
         plot_pcolormesh(\
@@ -121,7 +125,9 @@ def main(argv=None):
           plot_folder + 'u_sens_pen=10^' + str(penalty_exp) +'_x='+ str(Xi_mesh[0][point]) + '_t= ' + str(tmax) + '.png',
           "auto",
           "auto",
-          "auto")
+          "auto",
+          colorbar_label= 'u reduced sensitivity',
+          font_size = 30)
         plot_pcolormesh(\
           Xi_mesh,
           Eta_mesh,
@@ -129,7 +135,9 @@ def main(argv=None):
           plot_folder + 'v_sens_pen=10^' + str(penalty_exp) +'_x='+ str(Xi_mesh[0][point]) + '_t= ' + str(tmax) + '.png',
           "auto",
           "auto",
-          "auto")
+          "auto",
+          colorbar_label= 'v reduced sensitivity',
+          font_size = 30)
 
 if __name__ == "__main__":
     sys.exit(main())
