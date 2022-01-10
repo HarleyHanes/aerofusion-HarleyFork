@@ -2,10 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="9e97f1dc-0a10-483e-92ad-5b18cd4b6531" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/aerofusion/data/array_conversion.py" beforeDir="false" afterPath="$PROJECT_DIR$/aerofusion/data/array_conversion.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/aerofusion/rom/incompressible_navier_stokes_rom.py" beforeDir="false" afterPath="$PROJECT_DIR$/aerofusion/rom/incompressible_navier_stokes_rom.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/aerofusion/run_incompressible_pod_rom.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/aerofusion/run_incompressible_pod_rom_modifying.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Python.zip" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

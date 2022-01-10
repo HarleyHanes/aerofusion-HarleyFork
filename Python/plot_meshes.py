@@ -16,7 +16,7 @@ import scipy.io as mio
 def main(argv=None):
     #Variables to load
     filename = "../../lid_driven_snapshots/full data/results_lsa.npz"
-    num_points = [0, 129, -1]
+    num_points = [20, 129, -2]
     #Loop through modes
     results = np.load(filename)
     jac = results["sensitivities"]
@@ -49,8 +49,8 @@ def main(argv=None):
     #integration_times = simulation_time[integration_indices]
     #num_time = len(integration_times)
     
-    #mat2=mio.loadmat(data_folder + "weights_hr.mat")
-    #weights=np.ndarray.flatten(mat2['W'])
+    mat2=mio.loadmat(data_folder + "weights_hr.mat")
+    weights=np.ndarray.flatten(mat2['W'])
     mat2=mio.loadmat(data_folder + "Xi_hr.mat")
     Xi=np.ndarray.flatten(mat2['Xi'])
     mat2=mio.loadmat(data_folder + "Eta_hr.mat")
@@ -85,6 +85,10 @@ def main(argv=None):
         jac_1D[:,:,iTime] = np.reshape(jac[:, iTime], (num_cell, num_dim), order = 'F')
     sol_1D[:,:] = np.reshape(sol[:, integration_index], (num_cell, num_dim), order= 'F')
     
+    weights_ND = np.zeros([num_cell*num_dim])
+    for i_dim in range(num_dim):
+      weights_ND[i_dim*num_cell : (i_dim+1)*num_cell] = weights
+    
     
     
     jac_2D=np.empty((num_xi, num_eta, num_dim, jac.shape[1]))
@@ -95,6 +99,29 @@ def main(argv=None):
         for i_point in range(jac.shape[1]):
           jac_2D[:,:,i_dim, i_point] = arr_conv.array_1D_to_2D(\
             Xi, Eta, num_xi, num_eta, jac_1D[:,i_dim,i_point])
+              
+    #Compute QOIs
+    Sens_2D=np.empty((num_xi, num_eta, num_dim, len(num_points)))
+    for iPoint in range(len(num_points)):
+        # Get index of point
+        uIndex = num_points[iPoint]*num_eta
+        vIndex = uIndex+num_cell
+        # Extract Phi_l and weightL
+        phiU = phi[[uIndex],:].transpose()
+        phiV = phi[[vIndex],:].transpose()
+        weightU = weights_ND[uIndex]
+        weightV = weights_ND[vIndex]
+        # Compute Sensitivity for each
+        SensU= tmax*10**(penalty_exp)*np.matmul(phi[0:num_cell], phiU*weightU)
+        SensV= tmax*10**(penalty_exp)*np.matmul(phi[num_cell:], phiV*weightV)
+        #Recombine sensitivities into usual structure
+        Sens = np.concatenate((SensU, SensV))
+        #transform to mesh form
+        Sens_1D = np.reshape(Sens, (num_cell, num_dim), order = 'F')
+        for i_dim in range(num_dim):
+            Sens_2D[:,:,i_dim, iPoint] = arr_conv.array_1D_to_2D(\
+             Xi, Eta, num_xi, num_eta, Sens_1D[:,i_dim])
+          
   
     plot_pcolormesh(\
       Xi_mesh,
@@ -116,13 +143,15 @@ def main(argv=None):
       "auto",
       colorbar_label= 'v reduced',
       font_size = 30)
+    print (jac_2D.shape)
     for i_point in range(len(num_points)):
         point = num_points[i_point]
+        #----------------------------Plot numerical sensitivities-------------
         plot_pcolormesh(\
           Xi_mesh,
           Eta_mesh,
           jac_2D[:,:,0, point],
-          plot_folder + 'u_sens_pen=10^' + str(penalty_exp) +'_x='+ str(Xi_mesh[0][point]) + '_t= ' + str(tmax) + '.png',
+          plot_folder + 'u_sens_numerical_pen=10^' + str(penalty_exp) +'_x='+ str(Xi_mesh[0][point]) + '_t= ' + str(tmax) + '.png',
           "auto",
           "auto",
           "auto",
@@ -132,12 +161,32 @@ def main(argv=None):
           Xi_mesh,
           Eta_mesh,
           jac_2D[:,:,1, point],
-          plot_folder + 'v_sens_pen=10^' + str(penalty_exp) +'_x='+ str(Xi_mesh[0][point]) + '_t= ' + str(tmax) + '.png',
+          plot_folder + 'v_sens_numerical_pen=10^' + str(penalty_exp) +'_x='+ str(Xi_mesh[0][point]) + '_t= ' + str(tmax) + '.png',
           "auto",
           "auto",
           "auto",
           colorbar_label= 'v reduced sensitivity',
           font_size = 30)
-
+        #------------------------Plot analytical sensitivities
+        plot_pcolormesh(\
+          Xi_mesh,
+          Eta_mesh,
+          Sens_2D[:,:,0, i_point],
+          plot_folder + 'u_sens_analytical_pen=10^' + str(penalty_exp) +'_x='+ str(Xi_mesh[0][point]) + '_t= ' + str(tmax) + '.png',
+          "auto",
+          "auto",
+          "auto",
+          colorbar_label= 'u reduced sensitivity',
+          font_size = 30)
+        plot_pcolormesh(\
+          Xi_mesh,
+          Eta_mesh,
+          Sens_2D[:,:,1, i_point],
+          plot_folder + 'v_sens_analytical_pen=10^' + str(penalty_exp) +'_x='+ str(Xi_mesh[0][point]) + '_t= ' + str(tmax) + '.png',
+          "auto",
+          "auto",
+          "auto",
+          colorbar_label= 'v reduced sensitivity',
+          font_size = 30)
 if __name__ == "__main__":
     sys.exit(main())

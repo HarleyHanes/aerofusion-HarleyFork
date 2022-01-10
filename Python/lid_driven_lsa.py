@@ -19,8 +19,9 @@ import scipy.io as mio
 def main(argv=None):
     rom_matrices_filename="../../lid_driven_penalty/rom_matrices_50.npz"
     #penalty=10.0**4 penalty defined explicitly in function
-    QOI_type = "modal coeff"
-    tmax=100
+    QOI_type = "full data"
+    POI_type= "unreduced"
+    tmax=50
     
 
     data_folder = "../../lid_driven_snapshots/"
@@ -109,14 +110,17 @@ def main(argv=None):
                                                rom_matrices_filename, integration_times,\
                                                discretization, pod)
     #Define model structure
-    # model=uq.model(evalFcn=evalFcn,
-    #                 basePOIs=boundary_vec_base,
-    #                 POInames=x_boundary.astype(str)
-    #                 )
-    model=uq.model(evalFcn=evalFcnReduced,
-                    basePOIs=boundary_vec_reduced,
-                    POInames=x_boundary_reduced.astype(str)
-                    )
+    if POI_type.lower() == 'reduced':
+        model=uq.model(evalFcn=evalFcnReduced,
+                        basePOIs=boundary_vec_reduced,
+                        POInames=x_boundary_reduced.astype(str)
+                        )
+        
+    else:
+        model=uq.model(evalFcn=evalFcn,
+                        basePOIs=boundary_vec_base,
+                        POInames=x_boundary.astype(str)
+                        )
     #Set options
     uqOptions = uq.uqOptions()
     uqOptions.lsa.run=True

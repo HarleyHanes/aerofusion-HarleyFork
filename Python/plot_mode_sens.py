@@ -26,7 +26,7 @@ def main(argv=None):
     rom_matrices_filename="../../lid_driven_penalty/rom_matrices_50.npz"
     #penalty=10.0**4 penalty defined explicitly in function
     QOI_type = "modal coeff"
-    tmax=100
+    tmax=50
     penalty_exp=4
     
     #Specify when integration takes place 

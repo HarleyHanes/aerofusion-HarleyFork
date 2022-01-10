@@ -82,32 +82,24 @@ def main(argv=None):
       weights_ND[i_dim*num_cell : (i_dim+1)*num_cell] = weights
     
     
-    #Save ROM requirements into dictionaries
-    discretization = {\
-                      "Xi": Xi,
-                      "Eta": Eta,
-                      "Zeta": Zeta,
-                      "cell_centroid": cell_centroid,
-                      "num_cell":num_cell,
-                      "weights_ND": weights_ND
-        }
-    pod = {\
-           "phi": phi,
-           "modal_coeff": modal_coeff,
-           "vel_0_2D": vel_0_2D,
-           "reynolds_number": 25000}
-    
-    
-    x_boundary = np.linspace(-1,1, num_xi)
-    
-    
-    
-    
-    #Define evalFunction
-    evalFcn=lambda POI, penalty: RunROM(POI , QOI_type, rom_matrices_filename, integration_times, \
-                               discretization, pod, penalty)
 
-
+    for iPoint in range(len(points)):
+        # Get index of point
+        lindex = 
+        # Extract Phi_l and weightL
+        phiL = phi[lindex,:]
+        weightL = weight[lindex,:]
+        # Compute Sensitivity
+        Sens= t*np.matmul(phi, phiL*weightL)
+        #transform to mesh form
+        Sens_1D = np.emtpy((num_cell, num_dim)
+        Sens_2D = np.empty((num_xi, num_eta, num_dim))
+        Sens_1D = np.reshape(phi, (num_cell, num_dim), order = 'F')
+        for i_dim in range(num_dim):
+            Sens_2D[:,:,i_dim] = arr_conv.array_1D_to_3D(\
+             Xi, Eta, Zeta, num_xi, num_eta, num_zeta, Sens_1D[:,i_dim])
+        #Plot Mesh
+        
     #Run SA
     print("Running Sensitivity Analysis")
     

@@ -887,7 +887,7 @@ def rom_calc_rk45_boundary(Re, char_L, L0, LRe, C0, CRe, Q, B, B0, modal_coef, t
       y: RHS_rk45_boundary(t, y, Re, char_L, L0, LRe, C0, CRe, Q, B, B0, penalty),
       t_span,
       modal_coef[:,0],
-      method = 'RK45',
+      method = 'BDF',
       t_eval = t_eval,
       rtol = 1e-8)
   
