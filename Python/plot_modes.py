@@ -14,23 +14,25 @@ import matplotlib.pyplot as plt
 import scipy.io as mio
 
 def main(argv=None):
-    #Variables to load
-    filename = "../../lid_driven_snapshots/modal coeff/results_lsa.npz"
+    modes=1
     points = np.array([0, 50, 128, 150])
+    modes_plotted =  np.array([0])#np.array([0, 1, 5, 10, 49])
+    
+    #Variables to load
+    filename = "../../lid_driven_snapshots/modal coeff/"+"s500_m" + str(modes) + "_results_lsa.npz"
     #Loop through modes
     results = np.load(filename)
     jac = results["sensitivities"]
-    modes_plotted = np.array([0, 1, 5, 10, 49])
     
     #Load mesh data
-    rom_matrices_filename="../../lid_driven_penalty/rom_matrices_50.npz"
+    rom_matrices_filename="../../lid_driven_penalty/rom_matrices_s500_m" + str(modes) + ".npz"
     #penalty=10.0**4 penalty defined explicitly in function
     QOI_type = "modal coeff"
-    tmax=100
+    #tmax=100
     penalty_exp=4
     
     #Specify when integration takes place 
-    integration_times = np.arange(.1,tmax,.1)
+    integration_times = np.arange(.1,(jac.shape[0]+1)/10,.1)
     integration_indices = np.arange(1,len(integration_times)+1)
     num_points = len(points)
     num_times = len(integration_times)
@@ -49,9 +51,9 @@ def main(argv=None):
     num_time = len(integration_times)
     
     #Seperate Jac into modes
-    jac_seperated = np.empty((num_points, 50, num_times))
+    jac_seperated = np.empty((num_points, modes, num_times))
     for i in range(num_points):
-        jac_seperated[i, :, :]= np.reshape(jac[:,i], (50, num_times))
+        jac_seperated[i, :, :]= np.reshape(jac[:,i], (modes, num_times))
     
     #Plot Modes
     for i in range(num_points):
@@ -61,7 +63,7 @@ def main(argv=None):
             plt.xlabel("Time (s)")
             plt.ylabel(r"$\alpha_" + str(j+1)+"$")
             plt.title("Sensitivity of POD modes to Xi=" + str(points[i]))
-            plt.savefig(plot_folder + "LocalSensmode_" + str(j) + "_Xi=" + str(points[i]) + ".png")
+            plt.savefig(plot_folder + "LocalSensmode_" +"_m" + str(modes+1) + "_"+ str(j) + "_Xi=" + str(points[i]) + ".png")
 
 if __name__ == "__main__":
     sys.exit(main())

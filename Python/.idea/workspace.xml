@@ -3,6 +3,11 @@
   <component name="ChangeListManager">
     <list default="true" id="9e97f1dc-0a10-483e-92ad-5b18cd4b6531" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/../Python.zip" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.name" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.name" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lid_driven_lsa.py" beforeDir="false" afterPath="$PROJECT_DIR$/lid_driven_lsa.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lid_driven_rom.py" beforeDir="false" afterPath="$PROJECT_DIR$/lid_driven_rom.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plot_modes.py" beforeDir="false" afterPath="$PROJECT_DIR$/plot_modes.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

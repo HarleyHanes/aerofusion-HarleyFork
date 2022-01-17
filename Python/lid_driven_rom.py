@@ -38,16 +38,15 @@ import scipy.io as mio
 def main(argv=None):
 
     
-    rom_matrices_filename="../../lid_driven_penalty/rom_matrices_50.npz"
-    boundaryFcn= lambda x: (np.abs(x-1))**2.000001*(np.abs(x+1))**2.00000001
-    verify = True
-    #penalty_exp=np.array([-16,-15])
-    #penalty_exp = np.array([-52, 0, 2, 3, 4, 5])
-    #penalty_exp=-15# p.array([-16, -15])
-    penalty=10.0**4
-    
-
+    rom_matrices_filename="../../lid_driven_penalty/rom_matrices_s500_m1.npz"
     data_folder = "../../lid_driven_snapshots/"
+    verify = True
+    penalty=10.0**4
+    modes = 1        #number of modes to use (starting with 1)
+    
+    #Define Boundary Function 
+    boundaryFcn= lambda x: (np.abs(x-1))**2*(np.abs(x+1))**2
+    
     pod_data = np.load(data_folder + 'pod_lid_driven_50.npz')
     # Assign data to convenience variables
     vel_0  = pod_data['velocity_mean']
@@ -55,8 +54,12 @@ def main(argv=None):
     phi             = pod_data['phi']
     modal_coeff     = pod_data['modal_coeff']
     
+    #Reduce phi size
+    phi=phi[:, 0:modes]
+    modal_coeff=modal_coeff[0:modes]
+    
     #Specify when integration takes place 
-    integration_times = np.arange(1,60,.1)
+    integration_times = np.arange(.1,50+.1,.1)
     integration_indices = np.arange(1,len(integration_times)+1)
     #integration_indices = np.arange(1,500)
     #integration_times = simulation_time[integration_indices]
@@ -90,6 +93,9 @@ def main(argv=None):
     Xi_mesh = (Xi_mesh- (num_xi-1)/2)/(num_xi/2)
     Eta_mesh = (Eta_mesh- (num_eta-1)/2)/(num_eta/2)
     
+    #Compute Boundary 
+    boundary_vec=boundaryFcn(Xi_mesh[0,:])
+    
     #Load True Deta
     mat2=mat73.loadmat(data_folder + "re25000_hr.mat")
     vel_true = mat2['X']
@@ -121,54 +127,54 @@ def main(argv=None):
         Xi, Eta, zeta, num_xi, num_eta, num_zeta, vel_0_1D[:,i_dim])
 
   
-    # print(' - Calculation of Jacobian')
-    # jacobian = curvder.jacobian_of_grid_2d(\
-    #     Xi,
-    #     Eta,
-    #     zeta,
-    #     cell_centroid,
-    #     6)
-    #     #options.rom.jacobian.order_derivatives_x,
-    #     #options.rom.jacobian.order_derivatives_y,
-    #     #options.rom.jacobian.order_derivatives_z)
-    # print(' - Calculation of ROM matrices')
-    # (L0_calc, LRe_calc, C0_calc, CRe_calc, Q_calc) = \
-    #     incrom.pod_rom_matrices_2d(\
-    #       Xi,
-    #       Eta,
-    #       zeta,
-    #       cell_centroid,
-    #       num_cell,
-    #       phi,
-    #       weights_ND,
-    #       vel_0_3D,
-    #       jacobian,
-    #       6)
-    # #       #options.rom.jacobian.order_derivatives_x,
-    # #       #options.rom.jacobian.order_derivatives_y, 
-    # #       #options.rom.jacobian.order_derivatives_z)
-    # (B_calc, B0_calc, boundary_2D, vel_0_boundary_2D) = incrom.pod_rom_boundary_matrices_2d(\
-    #   Xi,
-    #   Eta,
-    #   zeta,
-    #   cell_centroid,
-    #   num_cell,
-    #   phi,
-    #   weights_ND,
-    #   vel_0_2D, 
-    #   boundaryFcn) 
-    # #LRe_calc=LRe_calc*(1/17000)
-    # #CRe_calc=CRe_calc*(1/17000)
-    # #print(' - Saving matrices to file', rom_matrices_filename)
-    # #Saving Matrices
-    # np.savez(rom_matrices_filename,
-    #           L0_calc  = L0_calc,
-    #           LRe_calc = LRe_calc,
-    #           C0_calc  = C0_calc,
-    #           CRe_calc = CRe_calc,
-    #           Q_calc   = Q_calc,
-    #           B_calc = B_calc,
-    #           B0_calc = B0_calc)
+    print(' - Calculation of Jacobian')
+    jacobian = curvder.jacobian_of_grid_2d(\
+        Xi,
+        Eta,
+        zeta,
+        cell_centroid,
+        6)
+        #options.rom.jacobian.order_derivatives_x,
+        #options.rom.jacobian.order_derivatives_y,
+        #options.rom.jacobian.order_derivatives_z)
+    print(' - Calculation of ROM matrices')
+    (L0_calc, LRe_calc, C0_calc, CRe_calc, Q_calc) = \
+        incrom.pod_rom_matrices_2d(\
+          Xi,
+          Eta,
+          zeta,
+          cell_centroid,
+          num_cell,
+          phi,
+          weights_ND,
+          vel_0_3D,
+          jacobian,
+          6)
+    #       #options.rom.jacobian.order_derivatives_x,
+    #       #options.rom.jacobian.order_derivatives_y, 
+    #       #options.rom.jacobian.order_derivatives_z)
+    (B_calc, B0_calc) = incrom.pod_rom_boundary_matrices_2d(\
+      Xi,
+      Eta,
+      zeta,
+      cell_centroid,
+      num_cell,
+      phi,
+      weights_ND,
+      vel_0_2D, 
+      boundary_vec) 
+    #LRe_calc=LRe_calc*(1/17000)
+    #CRe_calc=CRe_calc*(1/17000)
+    #print(' - Saving matrices to file', rom_matrices_filename)
+    #Saving Matrices
+    np.savez(rom_matrices_filename,
+              L0_calc  = L0_calc,
+              LRe_calc = LRe_calc,
+              C0_calc  = C0_calc,
+              CRe_calc = CRe_calc,
+              Q_calc   = Q_calc,
+              B_calc = B_calc,
+              B0_calc = B0_calc)
     
 
     #print('Reading matrices from file', rom_matrices_filename)
@@ -183,7 +189,7 @@ def main(argv=None):
     
     #Re-calculate boundary matrices
     print('Calculating Boundary Matrices')
-    (B_calc, B0_calc, boundary_2D, vel_0_boundary_2D) = incrom.pod_rom_boundary_matrices_2d(\
+    (B_calc, B0_calc) = incrom.pod_rom_boundary_matrices_2d(\
       Xi,
       Eta,
       zeta,
@@ -192,7 +198,7 @@ def main(argv=None):
       phi,
       weights_ND,
       vel_0_2D, 
-      boundaryFcn(Xi_mesh[0,:])) 
+      boundary_vec) 
 
     # print('ROM RK45 integration over times', integration_times)
     char_L = 1
@@ -206,41 +212,41 @@ def main(argv=None):
         plt.title('Mean Velocity')
         plt.show()
         
-        #Check Defined boundary velocities
-        plt.plot(boundary_2D[0,:,0])
-        plt.plot(boundary_2D[-1,:,0])
-        plt.plot(boundary_2D[:,0,0])
-        plt.plot(boundary_2D[:,-1,0])
-        plt.title("Boundary Values in V_Gamma")
-        plt.ylabel("u")
-        plt.legend(['Xi=-1', 'Xi=1', 'Eta=-1', 'Eta=1'])
-        plt.show()
-        plt.plot(boundary_2D[0,:,1])
-        plt.plot(boundary_2D[-1,:,1])
-        plt.plot(boundary_2D[:,0,1])
-        plt.plot(boundary_2D[:,-1,1])
-        plt.title("Boundary Values in V_Gamma")
-        plt.ylabel("v")
-        plt.legend(['Xi=-1', 'Xi=1', 'Eta=-1', 'Eta=1'])
-        plt.show()
+        # #Check Defined boundary velocities
+        # plt.plot(boundary_2D[0,:,0])
+        # plt.plot(boundary_2D[-1,:,0])
+        # plt.plot(boundary_2D[:,0,0])
+        # plt.plot(boundary_2D[:,-1,0])
+        # plt.title("Boundary Values in V_Gamma")
+        # plt.ylabel("u")
+        # plt.legend(['Xi=-1', 'Xi=1', 'Eta=-1', 'Eta=1'])
+        # plt.show()
+        # plt.plot(boundary_2D[0,:,1])
+        # plt.plot(boundary_2D[-1,:,1])
+        # plt.plot(boundary_2D[:,0,1])
+        # plt.plot(boundary_2D[:,-1,1])
+        # plt.title("Boundary Values in V_Gamma")
+        # plt.ylabel("v")
+        # plt.legend(['Xi=-1', 'Xi=1', 'Eta=-1', 'Eta=1'])
+        # plt.show()
         
-        #Check Mean boundary velocities
-        plt.plot(vel_0_boundary_2D[0,:,0])
-        plt.plot(vel_0_boundary_2D[-1,:,0])
-        plt.plot(vel_0_boundary_2D[:,0,0])
-        plt.plot(vel_0_boundary_2D[:,-1,0])
-        plt.title("Boundary Values in V0")
-        plt.ylabel("u")
-        plt.legend(['Xi=-1', 'Xi=1', 'Eta=-1', 'Eta=1'])
-        plt.show()
-        plt.plot(vel_0_boundary_2D[0,:,1])
-        plt.plot(vel_0_boundary_2D[-1,:,1])
-        plt.plot(vel_0_boundary_2D[:,0,1])
-        plt.plot(vel_0_boundary_2D[:,-1,1])
-        plt.title("Boundary Values in V0")
-        plt.ylabel("v")
-        plt.legend(['Xi=-1', 'Xi=1', 'Eta=-1', 'Eta=1'])
-        plt.show()
+        # #Check Mean boundary velocities
+        # plt.plot(vel_0_boundary_2D[0,:,0])
+        # plt.plot(vel_0_boundary_2D[-1,:,0])
+        # plt.plot(vel_0_boundary_2D[:,0,0])
+        # plt.plot(vel_0_boundary_2D[:,-1,0])
+        # plt.title("Boundary Values in V0")
+        # plt.ylabel("u")
+        # plt.legend(['Xi=-1', 'Xi=1', 'Eta=-1', 'Eta=1'])
+        # plt.show()
+        # plt.plot(vel_0_boundary_2D[0,:,1])
+        # plt.plot(vel_0_boundary_2D[-1,:,1])
+        # plt.plot(vel_0_boundary_2D[:,0,1])
+        # plt.plot(vel_0_boundary_2D[:,-1,1])
+        # plt.title("Boundary Values in V0")
+        # plt.ylabel("v")
+        # plt.legend(['Xi=-1', 'Xi=1', 'Eta=-1', 'Eta=1'])
+        # plt.show()
         
     
     # #Code to run for multiple penalty values
@@ -283,12 +289,12 @@ def main(argv=None):
         
         print('Plotting Results')
         #Plot Total Rom Energy
-        for iPenalty in range(len(penalty_exp)):
+        for iPenalty in range(len(penalty)):
             plt.plot(integration_times, RomEnergy[:,iPenalty], \
-                      label=r'$\tau=10^{' + str(penalty_exp[iPenalty]) + '}$')
+                      label=r'$\tau=10^{' + str(int(np.log10(penalty[iPenalty]))) + '}$')
         plt.legend(loc='upper left')
         plt.ylabel('ROM Kinetic Energy')
-        plt.savefig(data_folder + 'ROMenergy', bbox_inches='tight')
+        plt.savefig(data_folder + 'ROMenergy_m' +str(modes), bbox_inches='tight')
         plt.show()
         
         # for iPenalty in range(len(penalty_exp)-1):        
@@ -301,21 +307,21 @@ def main(argv=None):
         
         
         #Plot Rom Error
-        for iPenalty in range(len(penalty_exp)):
+        for iPenalty in range(len(penalty)):
             plt.plot(integration_times, ErrEnergy[:,iPenalty], \
-                      label=r'$\tau=10^{' + str(penalty_exp[iPenalty]) + '}$')
+                      label=r'$\tau=10^{' + str(int(np.log10(penalty[iPenalty]))) + '}$')
         plt.legend(loc='upper left')
         plt.ylabel('ROM Error')
-        plt.savefig(data_folder + 'ROMerror', bbox_inches='tight')
+        plt.savefig(data_folder + 'ROMerror_m' +str(modes), bbox_inches='tight')
         plt.show()
         
         #Plot Rom Error
-        for iPenalty in range(len(penalty_exp)):
+        for iPenalty in range(len(penalty)):
             plt.plot(integration_times, ErrEnergy[:,iPenalty]/TrueEnergy, \
-                      label=r'$\tau=10^{' + str(penalty_exp[iPenalty]) + '}$')
+                      label=r'$\tau=10^{' + str(int(np.log10(penalty[iPenalty]))) + '}$')
         plt.legend(loc='upper left')
         plt.ylabel('Relative ROM Error')
-        plt.savefig(data_folder + 'ROMerrorRelative', bbox_inches='tight')
+        plt.savefig(data_folder + 'ROMerrorRelative_m' +str(modes), bbox_inches='tight')
         plt.show()
         
         
@@ -347,6 +353,8 @@ def main(argv=None):
         #Seperate Dimensions
         vel_rom_1D = np.empty((num_cell, num_dim, num_time))
         vel_pod_1D = np.empty((num_cell, num_dim, num_time))
+        print(vel_pod_1D.shape)
+        print(vel_pod.shape)
         for i_time in range(num_time):
             vel_rom_1D[:,:, i_time]=np.reshape(vel_rom[:, i_time], (num_cell, num_dim), order = 'F')
             vel_pod_1D[:,:, i_time]=np.reshape(vel_pod[:, i_time], (num_cell, num_dim), order = 'F')
@@ -365,7 +373,7 @@ def main(argv=None):
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,0,1]-(vel_0_2D[:,:,0]+vel_rom_2D[:,:,0,0]),
-          data_folder + 'u_vel_rom_error_p' + str(penalty_exp) + '_t1.png',
+          data_folder + 'u_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t1.png',
           "auto",
           "auto",
           "auto")
@@ -374,7 +382,7 @@ def main(argv=None):
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,0,100]-(vel_0_2D[:,:,0]+vel_rom_2D[:,:,0,99]),
-          data_folder + 'u_vel_rom_error_p' + str(penalty_exp) + '_t100.png',
+          data_folder + 'u_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t100_m' + str(modes) + '.png',
           "auto",
           "auto",
           "auto")
@@ -384,7 +392,7 @@ def main(argv=None):
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,0,-1]-(vel_0_2D[:,:,0]+vel_rom_2D[:,:,0,-1]),
-          data_folder + 'u_vel_rom_error_p' + str(penalty_exp) + '_t499.png',
+          data_folder + 'u_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t499_m' + str(modes) + '.png',
           "auto",
           "auto",
           "auto")
@@ -393,7 +401,7 @@ def main(argv=None):
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,0,1]-(vel_0_2D[:,:,0]+vel_pod_2D[:,:,0,1]),
-          data_folder + 'u_vel_pod_error_t1.png',
+          data_folder + 'u_vel_pod_error_t1_m' + str(modes) + '.png',
           "auto",
           "auto",
           "auto")
@@ -402,7 +410,7 @@ def main(argv=None):
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,0,100]-(vel_0_2D[:,:,0]+vel_pod_2D[:,:,0,100]),
-          data_folder + 'u_vel_pod_error_t100.png',
+          data_folder + 'u_vel_pod_error_t100_m' + str(modes) + '.png',
           "auto",
           "auto",
           "auto")
@@ -412,7 +420,7 @@ def main(argv=None):
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,0,-1]-(vel_0_2D[:,:,0]+vel_pod_2D[:,:,0,-1]),
-          data_folder + 'u_vel_pod_error_t499.png',
+          data_folder + 'u_vel_pod_error_t499_m' + str(modes) + '.png',
           "auto",
           "auto",
           "auto")
@@ -421,7 +429,7 @@ def main(argv=None):
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,1,1]-(vel_0_2D[:,:,1]+vel_rom_2D[:,:,1,0]),
-          data_folder + 'v_vel_rom_error_p' + str(penalty_exp) + '_t1.png',
+          data_folder + 'v_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t1_m' + str(modes) + '.png',
           "auto",
           "auto",
           "auto")
@@ -430,7 +438,7 @@ def main(argv=None):
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,1,100]-(vel_0_2D[:,:,1]+vel_rom_2D[:,:,1,99]),
-          data_folder + 'v_vel_rom_error_p' + str(penalty_exp) + '_t100.png',
+          data_folder + 'v_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t100_m' + str(modes) + '.png',
           "auto",
           "auto",
           "auto")
@@ -440,7 +448,7 @@ def main(argv=None):
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,1,-1]-(vel_0_2D[:,:,1]+vel_rom_2D[:,:,1,-1]),
-          data_folder + 'v_vel_rom_error_p' + str(penalty_exp) + '_t498.png',
+          data_folder + 'v_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t498_m' + str(modes) + '.png',
           "auto",
           "auto",
           "auto")
@@ -449,7 +457,7 @@ def main(argv=None):
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,1,1]-(vel_0_2D[:,:,1]+vel_pod_2D[:,:,1,1]),
-          data_folder + 'v_vel_pod_error_t1.png',
+          data_folder + 'v_vel_pod_error_t1_m' + str(modes) + '.png',
           "auto",
           "auto",
           "auto")
@@ -458,7 +466,7 @@ def main(argv=None):
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,1,100]-(vel_0_2D[:,:,1]+vel_pod_2D[:,:,1,100]),
-          data_folder + 'v_vel_pod_error_t100.png',
+          data_folder + 'v_vel_pod_error_t100_m' + str(modes) + '.png',
           "auto",
           "auto",
           "auto")
@@ -468,7 +476,7 @@ def main(argv=None):
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,1,498]-(vel_0_2D[:,:,1]+vel_pod_2D[:,:,1,498]),
-          data_folder + 'v_vel_pod_error_t5499.png',
+          data_folder + 'v_vel_pod_error_t5499_m' + str(modes) + '.png',
           "auto",
           "auto",
           "auto")            

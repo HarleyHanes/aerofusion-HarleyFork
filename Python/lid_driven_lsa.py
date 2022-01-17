@@ -17,20 +17,26 @@ import matplotlib.pyplot as plt
 import scipy.io as mio
 
 def main(argv=None):
-    rom_matrices_filename="../../lid_driven_penalty/rom_matrices_50.npz"
-    #penalty=10.0**4 penalty defined explicitly in function
-    QOI_type = "full data"
+    QOI_type = "modal coeff"
     POI_type= "unreduced"
+    modes = 1
+    #penalty=10.0**4 penalty defined explicitly in function
     tmax=50
     
-
+    rom_matrices_filename="../../lid_driven_penalty/rom_matrices_s500_m" + str(modes) + ".npz"
+    save_path = "../../lid_driven_snapshots/" + str(QOI_type) + "/"+"s500_m" + str(modes) + "_"
     data_folder = "../../lid_driven_snapshots/"
+    
     pod_data = np.load(data_folder + 'pod_lid_driven_50.npz')
     # Assign data to convenience variables
     vel_0  = pod_data['velocity_mean']
     simulation_time = pod_data['simulation_time']
     phi             = pod_data['phi']
     modal_coeff     = pod_data['modal_coeff']
+    
+    #curtail phi and modal_coeff
+    phi=phi[:,0:modes]
+    modal_coeff=modal_coeff[0:modes]
     
     #Specify when integration takes place 
     integration_times = np.arange(.1,tmax,.1)
@@ -129,7 +135,7 @@ def main(argv=None):
     uqOptions.lsa.method='finite'
     uqOptions.lsa.xDelta=10**(-8)
     uqOptions.save = True
-    uqOptions.path = '../../lid_driven_snapshots/' + str(QOI_type) + '/'
+    uqOptions.path = save_path
     uqOptions.display=False 
     uqOptions.print= False
 
@@ -266,8 +272,6 @@ def RunROMreduced(POIs, POI_position, QOIselector,rom_matrices_filename, integra
 def RunROM(POIs, QOIselector,rom_matrices_filename, integration_times, \
            discretization, pod):
     print("Running ROM")
-    #Load ROM data
-    #print('Reading matrices from file', rom_matrices_filename)
     
     #Unpack discretization
     Xi = discretization["Xi"]
