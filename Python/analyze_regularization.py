@@ -12,17 +12,18 @@ from aerofusion.plot.plot_2D import plot_contour
 from aerofusion.plot.plot_2D import plot_pcolormesh
 import matplotlib.pyplot as plt
 import scipy.io as mio
+from compute_vorticity import Vorticity_2D
 
 def main(argv=None):
     # Run Settings
     penalty = 10.0 ** np.array([-15, -2, 4, 6])
     alpha = np.array([1, .5, .1, .01])
-    tmax=150
+    tmax= 150
     snapshots=500
     modes = 50
     fig_size=(20,16)
-    colorbar_label="u reduced"
-    plot_style = "stream"   #stream heat
+    plot_data = "vorticity"
+    plot_style =  "heat"   #stream heat
     
     #Define file locations
     data_folder = "../../lid_driven_snapshots/"
@@ -134,7 +135,20 @@ def main(argv=None):
             for i_dim in range(num_dim):
               vel_rom_2D[:,:,i_dim] = arr_conv.array_1D_to_2D(\
                   Xi, Eta, num_xi, num_eta, vel_rom_1D[:,i_dim])
-            #------------------------Plot Velocity ----------------------------
+            #------------------Identifty plotted data--------------------------
+            if plot_data.lower() == "vorticity reduced":
+                data = Vorticity_2D(vel_rom_2D)
+            if plot_data.lower() == "u reduced":
+                data = vel_rom_2D[:,:,0]
+            if plot_data.lower() == "v reduced":
+                data = vel_rom_2D[:,:,1]
+            if plot_data.lower() == "vorticity":
+                data = Vorticity_2D(vel_0_2D + vel_rom_2D)
+            if plot_data.lower() == "u":
+                data = vel_0_2D[:,:,0] + vel_rom_2D[:,:,0]
+            if plot_data.lower() == "v":
+                data = vel_0_2D[:,:,1] + vel_rom_2D[:,:,1]
+            #------------------------Plot Data ----------------------------
             # Make Subplot
             if iPenalty == 0:
                 ax = fig.add_subplot(int(200+np.ceil(len(alpha)/2)*10+iAlpha+1))
@@ -145,23 +159,24 @@ def main(argv=None):
                 im = ax.pcolormesh(\
                              Xi_mesh,
                              Eta_mesh,
-                             vel_rom_2D[:,:,0],
+                             data,
                              cmap = "jet",
-                             vmin= -np.max(np.abs(vel_rom_2D[:,:,0])),
-                             vmax= np.max(np.abs(vel_rom_2D[:,:,0])))
-                fig.colorbar(im, label = colorbar_label)
+                             vmin= -np.max(np.abs(data)),
+                             vmax= np.max(np.abs(data)))
+                fig.colorbar(im, label = plot_data)
             elif plot_style.lower() == "stream":
                 ax.streamplot(Xi_mesh, Eta_mesh, vel_rom_2D[:,:,0], vel_rom_2D[:,:,1],\
                               density = [.5, 1])
-            if (iPenalty+1)%2 ==0:
+            if iAlpha%2 == 0:
                 ax.set_ylabel("y")
-            if (iPenalty == len(penalty)-1) + (iPenalty == len(penalty)-2):
-                ax.set_ylabel("x")
+            if (iAlpha == len(penalty)-1) + (iAlpha == len(penalty)-2):
+                ax.set_xlabel("x")
             ax.set_title("a=" + str(alpha[iAlpha]))
         #save figure
         plt.savefig(plot_folder + "/extended_boundary_" + plot_style.lower() + "_s" 
-                    + str(snapshots) + "m" + str(modes) + "t"  + str(tmax) + "_penalty=" + \
-                        str(int(np.log10(penalty[iPenalty])))+".png")
+                    + str(snapshots) + "m" + str(modes) + "t"  + str(tmax) + \
+                    "_" + str(plot_data) + "_penalty=" + \
+                    str(int(np.log10(penalty[iPenalty]))) +".png")
     
     
     
