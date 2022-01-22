@@ -17,11 +17,12 @@ def main(argv=None):
     # Run Settings
     penalty = 10.0 ** np.array([-15, -2, 4, 6])
     alpha = np.array([1, .5, .1, .01])
-    tmax=100
+    tmax=150
     snapshots=500
     modes = 50
     fig_size=(20,16)
     colorbar_label="u reduced"
+    plot_style = "stream"   #stream heat
     
     #Define file locations
     data_folder = "../../lid_driven_snapshots/"
@@ -140,22 +141,26 @@ def main(argv=None):
             else: 
                 ax = fig.add_subplot(int(200+np.ceil(len(alpha)/2)*10+iAlpha+1),\
                                     sharex=ax, sharey= ax)
-            im = ax.pcolormesh(\
-                         Xi_mesh,
-                         Eta_mesh,
-                         vel_rom_2D[:,:,0],
-                         cmap = "jet",
-                         vmin= -np.max(np.abs(vel_rom_2D[:,:,0])),
-                         vmax= np.max(np.abs(vel_rom_2D[:,:,0])))
-            fig.colorbar(im, label = colorbar_label)
+            if plot_style.lower() == "heat":
+                im = ax.pcolormesh(\
+                             Xi_mesh,
+                             Eta_mesh,
+                             vel_rom_2D[:,:,0],
+                             cmap = "jet",
+                             vmin= -np.max(np.abs(vel_rom_2D[:,:,0])),
+                             vmax= np.max(np.abs(vel_rom_2D[:,:,0])))
+                fig.colorbar(im, label = colorbar_label)
+            elif plot_style.lower() == "stream":
+                ax.streamplot(Xi_mesh, Eta_mesh, vel_rom_2D[:,:,0], vel_rom_2D[:,:,1],\
+                              density = [.5, 1])
             if (iPenalty+1)%2 ==0:
                 ax.set_ylabel("y")
             if (iPenalty == len(penalty)-1) + (iPenalty == len(penalty)-2):
                 ax.set_ylabel("x")
             ax.set_title("a=" + str(alpha[iAlpha]))
         #save figure
-        plt.savefig(plot_folder + "/extended_boundary_s" + str(snapshots) + \
-                    "m" + str(modes) + "t"  + str(tmax) + "_penalty=" + \
+        plt.savefig(plot_folder + "/extended_boundary_" + plot_style.lower() + "_s" 
+                    + str(snapshots) + "m" + str(modes) + "t"  + str(tmax) + "_penalty=" + \
                         str(int(np.log10(penalty[iPenalty])))+".png")
     
     
