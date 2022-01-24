@@ -67,9 +67,18 @@ def main():
     # fMesh += eddyStrength*invRBF(-.85, -.85, Xi_mesh, Eta_mesh, locality)
     # fMesh += eddyStrength*invRBF(-.85, .85, Xi_mesh, Eta_mesh, locality)
     
-    fMesh += eddyStrength*expRBF(.8, -.8, Xi_mesh, Eta_mesh, locality)
-    fMesh += eddyStrength*expRBF(-.8, -.8, Xi_mesh, Eta_mesh, locality)
-    fMesh += 1.6*eddyStrength*expRBF(-.8, .8, Xi_mesh, Eta_mesh, locality)
+    fMesh += .3*eddyStrength*expRBF(.4, -.93, Xi_mesh, Eta_mesh, locality*3)
+    fMesh += .3*eddyStrength*expRBF(.91, -.91, Xi_mesh, Eta_mesh, locality/1.5)
+    
+    # fMesh += .3*eddyStrength*expRBF(.78, -.78, Xi_mesh, Eta_mesh, locality)
+    # fMesh += .3*eddyStrength*expRBF(.82, -.73, Xi_mesh, Eta_mesh, locality)
+    # fMesh += .3*eddyStrength*expRBF(.73, -.82, Xi_mesh, Eta_mesh, locality)
+    
+    fMesh += .3*eddyStrength*expRBF(-.92, -.65, Xi_mesh, Eta_mesh, locality*3)
+    fMesh += .8*eddyStrength*expRBF(-.85, -.85, Xi_mesh, Eta_mesh, locality*.4)
+    
+    fMesh += 1.6*eddyStrength*expRBF(-.84, .84, Xi_mesh, Eta_mesh, locality)
+    fMesh +=  .3*eddyStrength*expRBF(-.95, .63, Xi_mesh, Eta_mesh, locality*2)
     #Add Boundary Flows
     fMesh+=fBCcurve(1,1,Xi_mesh, Eta_mesh)
     fMesh+=fBCcurve(1,-1,Xi_mesh, Eta_mesh)
@@ -80,6 +89,7 @@ def main():
     
     fMesh= fMesh
     #Plot
+    plt.figure(figsize=(8, 8), dpi=80)
     # Create contour lines or level curves using matplotlib.pyplot module
     contours = plt.contour(Xi_mesh, Eta_mesh, fMesh, levels=20)
 
@@ -87,7 +97,8 @@ def main():
     plt.clabel(contours, inline=0, fontsize=10)
     
     # Display the contour plot
-    plt.show()
+    #plt.show()
+    plt.savefig("../../lid_driven_snapshots/extended_analysis/artifical_u0_stream.png")
     
     #-----------------------------------Convert to Vorticity Flow-----------------------
     v = - np.gradient(fMesh, axis = 1)
@@ -98,41 +109,41 @@ def main():
     dudy = np.gradient(u, axis = 0)
     
     #----------------------------------- Plot Voriticity and Velocity ----------
-    vorticity = dvdx-dudy
-    im = plt.pcolormesh(\
-               Xi_mesh,
-               Eta_mesh,
-               vorticity,
-               cmap = "jet",
-               vmin = -np.max(np.abs(vorticity)),
-               vmax = np.max(np.abs(vorticity)))
-    plt.colorbar(im)
-    plt.title("vorticity")
-    plt.show()
+    # vorticity = dvdx-dudy
+    # im = plt.pcolormesh(\
+    #            Xi_mesh,
+    #            Eta_mesh,
+    #            vorticity,
+    #            cmap = "jet",
+    #            vmin = -np.max(np.abs(vorticity)),
+    #            vmax = np.max(np.abs(vorticity)))
+    # plt.colorbar(im)
+    # plt.title("vorticity")
+    # plt.show()
     
     
-    im = plt.pcolormesh(\
-                Xi_mesh,
-                Eta_mesh,
-                u,
-                cmap = "jet",
-                vmin = -np.max(np.abs(u)),
-                vmax = np.max(np.abs(u)))
-    plt.colorbar(im)
-    plt.title("u")
-    plt.show()
+    # im = plt.pcolormesh(\
+    #             Xi_mesh,
+    #             Eta_mesh,
+    #             u,
+    #             cmap = "jet",
+    #             vmin = -np.max(np.abs(u)),
+    #             vmax = np.max(np.abs(u)))
+    # plt.colorbar(im)
+    # plt.title("u")
+    # plt.show()
 
     
-    im = plt.pcolormesh(\
-                Xi_mesh,
-                Eta_mesh,
-                v,
-                cmap = "jet",
-                vmin = -np.max(np.abs(v)),
-                vmax = np.max(np.abs(v)))
-    plt.colorbar(im)
-    plt.title("v")
-    plt.show()
+    # im = plt.pcolormesh(\
+    #             Xi_mesh,
+    #             Eta_mesh,
+    #             v,
+    #             cmap = "jet",
+    #             vmin = -np.max(np.abs(v)),
+    #             vmax = np.max(np.abs(v)))
+    # plt.colorbar(im)
+    # plt.title("v")
+    # plt.show()
 
 
 if __name__ == '__main__':
