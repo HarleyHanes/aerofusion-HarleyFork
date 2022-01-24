@@ -18,11 +18,11 @@ def main(argv=None):
     # Run Settings
     penalty = 10.0 ** np.array([-15, -2, 4, 6])
     alpha = np.array([1, .5, .1, .01])
-    tmax= 150
+    tmax= 50
     snapshots=500
     modes = 50
     fig_size=(20,16)
-    plot_data = "vorticity"
+    plot_data = "vorticity reduced"
     plot_style =  "heat"   #stream heat
     
     #Define file locations
