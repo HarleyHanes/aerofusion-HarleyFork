@@ -38,15 +38,26 @@ from aerofusion.pod import pod_modes
 #import mat73
 
 data_folder = "../../lid_driven_data/"
-velocity_file = "re20000_lr.mat"
-weights_file = "w_LowRes.mat"
+res = "high"
 u0_type = "artificial"
 if u0_type.lower() == "artificial":
     u0_file = "vel_artificial.npz"
 modes = 100
-pod_file = data_folder + "pod_Re20000lr_s500m" + str(modes)
 t_iter = 500
 
+if res.lower() == "low":
+    weights_file = "w_LowRes.mat"
+    velocity_file = "re20000_lr.mat"
+    pod_file = data_folder + "pod_Re20000lr_s500m" + str(modes)
+    num_xi   = 130
+    num_eta  = 130
+elif res.upper() == "high":
+    weights_file = "w_HiRes.mat"
+    velocity_file = "re17000_hr.mat"
+    pod_file = data_folder + "pod_Re17000hr_s500m" + str(modes)
+    num_xi   = 258
+    num_eta  = 258
+    
 print("Loading Data")
 mat = mio.loadmat(data_folder + velocity_file)
 velocity_1D_compact=mat['X'][:]
@@ -59,10 +70,7 @@ simulation_time = np.zeros((t_iter,))
 for i in range(t_iter):
     simulation_time[i]=i*0.1
 
-
 num_dim  = 2
-num_xi   = 130
-num_eta  = 130
 num_zeta = 1
 num_cell = num_xi*num_eta*num_zeta
 num_snapshots = velocity_1D_compact.shape[1]

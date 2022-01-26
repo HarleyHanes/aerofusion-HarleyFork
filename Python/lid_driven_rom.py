@@ -134,12 +134,12 @@ def main(argv=None):
 
   
     print(' - Calculation of Jacobian')
-    jacobian = curvder.jacobian_of_grid_2d(\
+    jacobian = curvder.jacobian_of_grid_2d2(\
         Xi,
         Eta,
         zeta,
         cell_centroid,
-        6)
+        2)
         #options.rom.jacobian.order_derivatives_x,
         #options.rom.jacobian.order_derivatives_y,
         #options.rom.jacobian.order_derivatives_z)

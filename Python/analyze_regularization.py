@@ -20,7 +20,7 @@ def main(argv=None):
     alpha = np.array([1, .5, .1, .01])
     tmax= 50
     snapshots=500
-    modes = 100
+    modes = 50
     fig_size=(20,16)
     res = "low"
     plot_data = "vorticity reduced"
@@ -34,8 +34,8 @@ def main(argv=None):
         rom_filename = "rom_matrices_s500_m50.npz"
     elif res.lower() == "low":
         data_folder = "../../lid_driven_data/"
-        pod_filename="pod_Re20000lr_mean_s500m100.npz"
-        plot_folder = "../../lid_driven_snapshots/mean_u0/"
+        pod_filename="pod_Re20000lr_art_s500m100.npz"
+        plot_folder = "../../lid_driven_snapshots/artificial_u0/"
         rom_filename= "rom_art_s500m" + str(modes) + ".npz"
     
     # Define Integration Times

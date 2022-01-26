@@ -8,10 +8,56 @@ import findiff
 import time
 
 from aerofusion.data.array_conversion import array_3D_to_1D
+from aerofusion.numerics import derivatives as der
 
 # -----------------------------------------------------------------------------
 # Note: - We assume curvilinear and Cartisian grid have one to one mapping
 #       - For now we are sending only one dimension of variable
+def jacobian_of_grid_2d2(xi, eta, zeta, cell_center, accuracy):
+
+  var_dim = cell_center.shape
+  num_xi = var_dim[0]
+  num_eta = var_dim[1]
+  num_zeta = var_dim[2]
+  #num_dim = var_dim[3]
+  num_cell = num_xi * num_eta
+
+  dx_dxi = np.zeros([num_xi, num_eta, num_zeta])
+  dy_dxi = np.zeros([num_xi, num_eta, num_zeta])
+  dy_deta = np.zeros([num_xi, num_eta, num_zeta])
+  dx_deta = np.zeros([num_xi, num_eta, num_zeta])
+  if accuracy==6:
+      (dcell_dxi, dcell_deta) = der.FD_derivative_6th_order(cell_center)
+  elif accuracy==4:
+      (dcell_dxi, dcell_deta) = der.FD_derivative_4th_order(cell_center)
+  else:
+      (dcell_dxi, dcell_deta) = der.FD_derivative_2nd_order(cell_center)
+  dx_dxi[:,:,:] = dcell_dxi[:,:,:,0]
+  dy_dxi=dcell_dxi[:,:,:,1]
+  dy_deta[:, :, :] = dcell_deta[:, :, :, 1]
+  dx_deta[:, :, :] = dcell_deta[:, :, :, 0]
+
+  dx_dxi_1D = array_3D_to_1D(xi, eta, zeta, num_cell, dx_dxi)
+  dy_dxi_1D = array_3D_to_1D(xi, eta, zeta, num_cell, dy_dxi)
+  dx_deta_1D = array_3D_to_1D(xi, eta, zeta, num_cell, dx_deta)
+  dy_deta_1D = array_3D_to_1D(xi, eta, zeta, num_cell, dy_deta)
+
+  jacobian = np.zeros([2, 2, num_cell])
+  # j00 = dxi/dx j01 = dxi/dy j10 = deta/dx j11 = deta/dy
+  for i_cell in range(num_cell):
+    det = dx_dxi_1D[i_cell]*dy_deta_1D[i_cell] - \
+          dx_deta_1D[i_cell]*dy_dxi_1D[i_cell]
+    inv_det = 1.0 / det
+    jacobian[0, 0, i_cell] =   inv_det * dy_deta_1D[i_cell]
+    jacobian[0, 1, i_cell] =  -inv_det * dx_deta_1D[i_cell]
+    jacobian[1, 0, i_cell] =  -inv_det * dy_dxi_1D[i_cell]
+    jacobian[1, 1, i_cell] =   inv_det * dx_dxi_1D[i_cell]
+
+  return(jacobian)
+
+
+
+
 def jacobian_of_grid_2d(xi, eta, zeta, cell_center, accuracy):
 
   var_dim = cell_center.shape

@@ -11,24 +11,40 @@ import aerofusion.data.array_conversion as arr_conv
 
 def main():
     #File settings
+    res = "high"
     data_folder = "../../lid_driven_data/"
-    u0_filename = "vel_artificial.npz"
     #Make R2 Mesh
     
-    mat2=mio.loadmat(data_folder + "w_LowRes.mat")
-    weights=np.ndarray.flatten(mat2['w'])
-    mat2=mio.loadmat(data_folder + "Xi_lr.mat")
-    Xi=np.ndarray.flatten(mat2['Xi'])
-    mat2=mio.loadmat(data_folder + "Eta_lr.mat")
-    Eta=np.ndarray.flatten(mat2['Eta'])
-    centroid_file=np.load(data_folder + "cell_center_low_res.npz")
-
-   
-    num_dim  = 2
-    num_xi   = 130
-    num_eta  = 130
-    num_zeta = 1
+    if res.lower()== "low":
+        u0_filename = "vel_artificial_lr.npz"
+        
+        mat2=mio.loadmat(data_folder + "w_LowRes.mat")
+        weights=np.ndarray.flatten(mat2['w'])
+        mat2=mio.loadmat(data_folder + "Xi_lr.mat")
+        Xi=np.ndarray.flatten(mat2['Xi'])
+        mat2=mio.loadmat(data_folder + "Eta_lr.mat")
+        Eta=np.ndarray.flatten(mat2['Eta'])
+        centroid_file=np.load(data_folder + "cell_center_low_res.npz")
     
+        num_dim  = 2
+        num_xi   = 130
+        num_eta  = 130
+        num_zeta = 1
+    if res.lower() == "high":
+        u0_filename = "vel_artificial_hr.npz"
+        mat2=mio.loadmat(data_folder + "w_HiRes.mat")
+        weights=np.ndarray.flatten(mat2['w'])
+        mat2=mio.loadmat(data_folder + "Xi_hr.mat")
+        Xi=np.ndarray.flatten(mat2['Xi'])
+        mat2=mio.loadmat(data_folder + "Eta_hr.mat")
+        Eta=np.ndarray.flatten(mat2['Eta'])
+        centroid_file=np.load(data_folder + "cell_center_high_res.npz")
+    
+        num_dim  = 2
+        num_xi   = 258
+        num_eta  = 258
+        num_zeta = 1
+        
     Xi=Xi[0:(num_xi*num_eta)]
     Eta=Eta[0:(num_xi*num_eta)]
     
