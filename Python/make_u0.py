@@ -7,34 +7,35 @@ Created on Mon Jan 24 12:59:08 2022
 import scipy.io as mio
 import numpy as np
 import matplotlib.pyplot as plt
+import aerofusion.data.array_conversion as arr_conv
 
 def main():
-    #Plot settings
-    betaCenterEddy = 2
     #File settings
-    data_folder = "../../lid_driven_snapshots/"
+    data_folder = "../../lid_driven_data/"
+    u0_filename = "vel_artificial.npz"
     #Make R2 Mesh
     
-    mat2=mio.loadmat(data_folder + "weights_hr.mat")
-    weights=np.ndarray.flatten(mat2['W'])
-    mat2=mio.loadmat(data_folder + "Xi_hr.mat")
+    mat2=mio.loadmat(data_folder + "w_LowRes.mat")
+    weights=np.ndarray.flatten(mat2['w'])
+    mat2=mio.loadmat(data_folder + "Xi_lr.mat")
     Xi=np.ndarray.flatten(mat2['Xi'])
-    mat2=mio.loadmat(data_folder + "Eta_hr.mat")
+    mat2=mio.loadmat(data_folder + "Eta_lr.mat")
     Eta=np.ndarray.flatten(mat2['Eta'])
-    mat2=mio.loadmat(data_folder + "C_x_hr.mat")
-    cell_center_x=mat2['C']
-    mat2=mio.loadmat(data_folder + "C_y_hr.mat")
-    cell_center_y=mat2['C2']
-    
-    cell_centroid=np.zeros((258,258,1,2))
-    cell_centroid[:,:,0,0]=cell_center_x
-    cell_centroid[:,:,0,1]=cell_center_y
+    centroid_file=np.load(data_folder + "cell_center_low_res.npz")
 
    
     num_dim  = 2
-    num_xi   = 258
-    num_eta  = 258
-    num_cell = num_xi*num_eta
+    num_xi   = 130
+    num_eta  = 130
+    num_zeta = 1
+    
+    Xi=Xi[0:(num_xi*num_eta)]
+    Eta=Eta[0:(num_xi*num_eta)]
+    
+    cell_centroid=np.zeros((num_xi,num_eta,num_zeta,num_dim))
+    cell_centroid[:,:,0,0] = centroid_file['cell_center_x']
+    cell_centroid[:,:,0,1] = centroid_file['cell_center_y']
+    num_cell = num_xi*num_eta*num_zeta
     base_vec = np.linspace(-1,1,num = num_xi)
     zeta=np.zeros((Xi.shape[0],),dtype='int')
     
@@ -124,17 +125,16 @@ def main():
     #Bottom BC
     u[0,:]=0
     v[0,:]=0
-    u[-1,:] = np.max(np.abs(u))    #Use max value so since it will be rescaled 
-    v[-1,:] = 0
     u[:,0] = 0
     v[:,0] = 0
     u[:,-1] = 0
     v[:,-1] = 0
-    #-----------------------------------Rescale Energy-----------------------------------------------
+    u[-1,:] = np.max(np.abs(u))    #Use max value so since it will be rescaled 
+    v[-1,:] = 0
     
-    #Compute artificial u0 energy
-    #Compute original u0 energy
-    #Rescale system 
+    #Rescale BC velocity
+    u = u/(u[-1,0])
+    v = v/(u[-1,0])
     
     #Reapply top BC
     print("u_inf difference before fixing: " + str(1-u[-1,0]))
@@ -180,7 +180,33 @@ def main():
     plt.colorbar(im)
     plt.title("v")
     plt.show()
-
+    
+    #------------------------Get velocity_1D_compact
+    #Convert to 2D
+    velocity_2D = np.empty(u.shape + (2,))
+    velocity_2D[:,:,0] = u
+    velocity_2D[:,:,1] = v
+    #Convert to 1D
+    velocity_1D=np.empty((num_cell,2))
+    for i in range(2):
+        velocity_1D[:,i] = arr_conv.array_2D_to_1D(\
+                       Xi, Eta, num_cell, velocity_2D[:,:,i])
+    velocity_1D_compact = np.reshape(velocity_1D, (num_cell*num_dim), order = 'F')
+    
+    #Convert back to mesh for sanity check
+    check_velocity_1D = np.reshape(velocity_1D_compact, (num_cell, num_dim), order = 'F')
+    check_velocity_2D = np.empty(velocity_2D.shape)
+    for i in range(2):
+        check_velocity_2D[:,:,i] = arr_conv.array_1D_to_2D(\
+                                Xi, Eta, num_xi, num_eta, check_velocity_1D[:,i])
+    if np.max(check_velocity_2D-velocity_2D)>1e-10:
+        raise(Exception("Array Conversion flawed"))
+        
+    #Save files
+    np.savez(data_folder + u0_filename,
+             D1_compact = velocity_1D_compact,
+             D1 = velocity_1D,
+             D2 = velocity_2D)
 
 if __name__ == '__main__':
     main()
