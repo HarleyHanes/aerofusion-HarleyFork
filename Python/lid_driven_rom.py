@@ -38,16 +38,19 @@ import scipy.io as mio
 def main(argv=None):
 
     
-    rom_matrices_filename="../../lid_driven_penalty/rom_matrices_s500_m1.npz"
-    data_folder = "../../lid_driven_snapshots/"
+    rom_matrices_filename="rom_art_s500m200.npz"
+    data_folder = "../../lid_driven_data/"
+    pod_filename="pod_Re20000lr_art_s500m200.npz"
+    data_filename = "re20000_lr.mat"
+    
     verify = True
     penalty=10.0**4
-    modes = 1        #number of modes to use (starting with 1)
+    modes = 200      #number of modes to use (starting with 1)
     
     #Define Boundary Function 
     boundaryFcn= lambda x: (np.abs(x-1))**2*(np.abs(x+1))**2
     
-    pod_data = np.load(data_folder + 'pod_lid_driven_50.npz')
+    pod_data = np.load(data_folder + pod_filename)
     # Assign data to convenience variables
     vel_0  = pod_data['velocity_mean']
     simulation_time = pod_data['simulation_time']
@@ -65,27 +68,30 @@ def main(argv=None):
     #integration_times = simulation_time[integration_indices]
     num_time = len(integration_times)
     
-    mat2=mio.loadmat(data_folder + "weights_hr.mat")
-    weights=np.ndarray.flatten(mat2['W'])
-    mat2=mio.loadmat(data_folder + "Xi_hr.mat")
+    mat2=mio.loadmat(data_folder + "w_LowRes.mat")
+    weights=np.ndarray.flatten(mat2['w'])
+    mat2=mio.loadmat(data_folder + "Xi_lr.mat")
     Xi=np.ndarray.flatten(mat2['Xi'])
-    mat2=mio.loadmat(data_folder + "Eta_hr.mat")
+    mat2=mio.loadmat(data_folder + "Eta_lr.mat")
     Eta=np.ndarray.flatten(mat2['Eta'])
-    mat2=mio.loadmat(data_folder + "C_x_hr.mat")
-    cell_center_x=mat2['C']
-    mat2=mio.loadmat(data_folder + "C_y_hr.mat")
-    cell_center_y=mat2['C2']
-    
-    cell_centroid=np.zeros((258,258,1,2))
-    cell_centroid[:,:,0,0]=cell_center_x
-    cell_centroid[:,:,0,1]=cell_center_y
+    centroid_file=np.load(data_folder + "cell_center_low_res.npz")
 
-   
+  
     num_dim  = 2
-    num_xi   = 258
-    num_eta  = 258
+    num_xi   = 130
+    num_eta  = 130
     num_zeta = 1
-    num_cell = 66564
+   
+    Xi=Xi[0:(num_xi*num_eta)]
+    Eta=Eta[0:(num_xi*num_eta)]
+    weights = weights[0:(num_xi*num_eta)]
+   
+    cell_centroid=np.zeros((num_xi,num_eta,num_zeta,num_dim))
+    cell_centroid[:,:,0,0] = centroid_file['cell_center_x']
+    cell_centroid[:,:,0,1] = centroid_file['cell_center_y']
+    num_cell = num_xi*num_eta*num_zeta
+   
+    base_vec = np.linspace(-1,1,num = num_xi)
     zeta=np.zeros((Xi.shape[0],),dtype='int')
     
     Xi_mesh=Xi.reshape((num_eta, num_xi))
@@ -97,7 +103,7 @@ def main(argv=None):
     boundary_vec=boundaryFcn(Xi_mesh[0,:])
     
     #Load True Deta
-    mat2=mat73.loadmat(data_folder + "re25000_hr.mat")
+    mat2=mio.loadmat(data_folder + data_filename)
     vel_true = mat2['X']
     vel_true = vel_true[:,integration_indices]
     
@@ -150,6 +156,9 @@ def main(argv=None):
           vel_0_3D,
           jacobian,
           6)
+    print(np.max(LRe_calc))
+    print(np.max(L0_calc))
+    print(np.max(C0_calc))
     #       #options.rom.jacobian.order_derivatives_x,
     #       #options.rom.jacobian.order_derivatives_y, 
     #       #options.rom.jacobian.order_derivatives_z)
@@ -167,7 +176,7 @@ def main(argv=None):
     #CRe_calc=CRe_calc*(1/17000)
     #print(' - Saving matrices to file', rom_matrices_filename)
     #Saving Matrices
-    np.savez(rom_matrices_filename,
+    np.savez(data_folder + rom_matrices_filename,
               L0_calc  = L0_calc,
               LRe_calc = LRe_calc,
               C0_calc  = C0_calc,
@@ -178,7 +187,7 @@ def main(argv=None):
     
 
     #print('Reading matrices from file', rom_matrices_filename)
-    matrices = np.load(rom_matrices_filename)
+    matrices = np.load(data_folder + rom_matrices_filename)
     L0_calc  = matrices['L0_calc']
     LRe_calc = matrices['LRe_calc']
     C0_calc  = matrices['C0_calc']

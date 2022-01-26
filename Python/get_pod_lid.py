@@ -43,9 +43,9 @@ weights_file = "w_LowRes.mat"
 u0_type = "artificial"
 if u0_type.lower() == "artificial":
     u0_file = "vel_artificial.npz"
-modes = 2
+modes = 100
 pod_file = data_folder + "pod_Re20000lr_s500m" + str(modes)
-t_iter = 10
+t_iter = 500
 
 print("Loading Data")
 mat = mio.loadmat(data_folder + velocity_file)

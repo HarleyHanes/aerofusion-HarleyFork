@@ -20,16 +20,23 @@ def main(argv=None):
     alpha = np.array([1, .5, .1, .01])
     tmax= 50
     snapshots=500
-    modes = 50
+    modes = 100
     fig_size=(20,16)
+    res = "low"
     plot_data = "vorticity reduced"
     plot_style =  "heat"   #stream heat
     
     #Define file locations
-    data_folder = "../../lid_driven_snapshots/"
-    pod_filename = "pod_lid_driven_50.npz"
-    plot_folder = "../../lid_driven_snapshots/extended_analysis/"
-    rom_filename="../../lid_driven_penalty/rom_matrices_s500_m50.npz"
+    if res.lower() == "high":
+        data_folder = "../../lid_driven_data/"
+        pod_filename = "pod_lid_driven_50.npz"
+        plot_folder = "../../lid_driven_snapshots/extended_analysis/"
+        rom_filename = "rom_matrices_s500_m50.npz"
+    elif res.lower() == "low":
+        data_folder = "../../lid_driven_data/"
+        pod_filename="pod_Re20000lr_mean_s500m100.npz"
+        plot_folder = "../../lid_driven_snapshots/mean_u0/"
+        rom_filename= "rom_art_s500m" + str(modes) + ".npz"
     
     # Define Integration Times
     integration_times = np.arange(.1,tmax+.1,.1,)
@@ -37,11 +44,11 @@ def main(argv=None):
     #--------------------------------------- Load Data
     pod_data = np.load(data_folder + pod_filename)
     vel_0           = pod_data['velocity_mean']
-    phi             = pod_data['phi']
-    modal_coeff     = pod_data['modal_coeff']
+    phi             = pod_data['phi'][:,0:modes]
+    modal_coeff     = pod_data['modal_coeff'][0:modes]
     
     
-    matrices = np.load(rom_filename)
+    matrices = np.load(data_folder + rom_filename)
     L0_calc  = matrices['L0_calc']
     LRe_calc = matrices['LRe_calc']
     C0_calc  = matrices['C0_calc']
@@ -50,29 +57,58 @@ def main(argv=None):
     B_calc   = matrices['B_calc']
     B0_calc  = matrices['B0_calc']
     
+    if res.lower() == "low":
+        mat2=mio.loadmat(data_folder + "w_LowRes.mat")
+        weights=np.ndarray.flatten(mat2['w'])
+        mat2=mio.loadmat(data_folder + "Xi_lr.mat")
+        Xi=np.ndarray.flatten(mat2['Xi'])
+        mat2=mio.loadmat(data_folder + "Eta_lr.mat")
+        Eta=np.ndarray.flatten(mat2['Eta'])
+        centroid_file=np.load(data_folder + "cell_center_low_res.npz")
     
-    mat2=mio.loadmat(data_folder + "weights_hr.mat")
-    weights=np.ndarray.flatten(mat2['W'])
-    mat2=mio.loadmat(data_folder + "Xi_hr.mat")
-    Xi=np.ndarray.flatten(mat2['Xi'])
-    mat2=mio.loadmat(data_folder + "Eta_hr.mat")
-    Eta=np.ndarray.flatten(mat2['Eta'])
-    mat2=mio.loadmat(data_folder + "C_x_hr.mat")
-    cell_center_x=mat2['C']
-    mat2=mio.loadmat(data_folder + "C_y_hr.mat")
-    cell_center_y=mat2['C2']
+      
+        num_dim  = 2
+        num_xi   = 130
+        num_eta  = 130
+        num_zeta = 1
+       
+        Xi=Xi[0:(num_xi*num_eta)]
+        Eta=Eta[0:(num_xi*num_eta)]
+        weights = weights[0:(num_xi*num_eta)]
+       
+        cell_centroid=np.zeros((num_xi,num_eta,num_zeta,num_dim))
+        cell_centroid[:,:,0,0] = centroid_file['cell_center_x']
+        cell_centroid[:,:,0,1] = centroid_file['cell_center_y']
+        num_cell = num_xi*num_eta*num_zeta
+       
+        base_vec = np.linspace(-1,1,num = num_xi)
+        zeta=np.zeros((Xi.shape[0],),dtype='int')
+    elif res.lower()=="high":
+        mat2=mio.loadmat(data_folder + "w_HiRes.mat")
+        weights=np.ndarray.flatten(mat2['w'])
+        mat2=mio.loadmat(data_folder + "Xi_hr.mat")
+        Xi=np.ndarray.flatten(mat2['Xi'])
+        mat2=mio.loadmat(data_folder + "Eta_hr.mat")
+        Eta=np.ndarray.flatten(mat2['Eta'])
+        centroid_file=np.load(data_folder + "cell_center_high_res.npz")
     
-    cell_centroid=np.zeros((258,258,1,2))
-    cell_centroid[:,:,0,0]=cell_center_x
-    cell_centroid[:,:,0,1]=cell_center_y
-
-   
-    num_dim  = 2
-    num_xi   = 258
-    num_eta  = 258
-    num_cell = num_xi*num_eta
-    base_vec = np.linspace(-1,1,num = num_xi)
-    zeta=np.zeros((Xi.shape[0],),dtype='int')
+      
+        num_dim  = 2
+        num_xi   = 258
+        num_eta  = 258
+        num_zeta = 1
+       
+        Xi=Xi[0:(num_xi*num_eta)]
+        Eta=Eta[0:(num_xi*num_eta)]
+        weights = weights[0:(num_xi*num_eta)]
+       
+        cell_centroid=np.zeros((num_xi,num_eta,num_zeta,num_dim))
+        cell_centroid[:,:,0,0] = centroid_file['cell_center_x']
+        cell_centroid[:,:,0,1] = centroid_file['cell_center_y']
+        num_cell = num_xi*num_eta*num_zeta
+       
+        base_vec = np.linspace(-1,1,num = num_xi)
+        zeta=np.zeros((Xi.shape[0],),dtype='int')
     
     #--------------------------------------Reformat Data
     #Location indices

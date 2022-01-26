@@ -36,6 +36,7 @@ def main():
     cell_centroid[:,:,0,0] = centroid_file['cell_center_x']
     cell_centroid[:,:,0,1] = centroid_file['cell_center_y']
     num_cell = num_xi*num_eta*num_zeta
+    
     base_vec = np.linspace(-1,1,num = num_xi)
     zeta=np.zeros((Xi.shape[0],),dtype='int')
     
