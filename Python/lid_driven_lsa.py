@@ -15,19 +15,26 @@ from aerofusion.plot.plot_2D import plot_pcolormesh
 import sys
 import matplotlib.pyplot as plt
 import scipy.io as mio
-
+from boundary_rom import BoundaryPenaltyROM as RunROM
 def main(argv=None):
-    QOI_type = "modal coeff"
-    POI_type= "unreduced"
-    modes = 1
+    QOI_type = "vorticity"
+    POI_type= "alpha"   #unreduced
+    alpha_value = np.array([1])
+    modes = 100
+    res = "high"
+    method = "mean"
     #penalty=10.0**4 penalty defined explicitly in function
-    tmax=50
+    tmax=100
+    penalty_exp = 2
     
-    rom_matrices_filename="../../lid_driven_penalty/rom_matrices_s500_m" + str(modes) + ".npz"
-    save_path = "../../lid_driven_snapshots/" + str(QOI_type) + "/"+"s500_m" + str(modes) + "_"
-    data_folder = "../../lid_driven_snapshots/"
+    #rom_matrices_filename="../../lid_driven_penalty/rom_matrices_s500_m" + str(modes) + ".npz"
+    save_path = "../../lid_driven_data/" + method +"_" + QOI_type + "_a" + str(alpha_value[0]) + "_s500m" + str(modes) + "_"
+    #data_folder = "../../lid_driven_snapshots/"
+    #pod_filename = 'pod_lid_driven_50.npz'
+    data_folder = "../../lid_driven_data/"
+    pod_filename = "pod_Re17000hr_mean_s500m100.npz"
     
-    pod_data = np.load(data_folder + 'pod_lid_driven_50.npz')
+    pod_data = np.load(data_folder + pod_filename)
     # Assign data to convenience variables
     vel_0  = pod_data['velocity_mean']
     simulation_time = pod_data['simulation_time']
@@ -44,28 +51,44 @@ def main(argv=None):
     #integration_indices = np.arange(1,500)
     #integration_times = simulation_time[integration_indices]
     num_time = len(integration_times)
+    if res.lower() == "low":
+        mat2=mio.loadmat(data_folder + "w_LowRes.mat")
+        weights=np.ndarray.flatten(mat2['w'])
+        mat2=mio.loadmat(data_folder + "Xi_lr.mat")
+        Xi=np.ndarray.flatten(mat2['Xi'])
+        mat2=mio.loadmat(data_folder + "Eta_lr.mat")
+        Eta=np.ndarray.flatten(mat2['Eta'])
+        centroid_file=np.load(data_folder + "cell_center_low_res.npz")
     
-    mat2=mio.loadmat(data_folder + "weights_hr.mat")
-    weights=np.ndarray.flatten(mat2['W'])
-    mat2=mio.loadmat(data_folder + "Xi_hr.mat")
-    Xi=np.ndarray.flatten(mat2['Xi'])
-    mat2=mio.loadmat(data_folder + "Eta_hr.mat")
-    Eta=np.ndarray.flatten(mat2['Eta'])
-    mat2=mio.loadmat(data_folder + "C_x_hr.mat")
-    cell_center_x=mat2['C']
-    mat2=mio.loadmat(data_folder + "C_y_hr.mat")
-    cell_center_y=mat2['C2']
+        num_dim  = 2
+        num_xi   = 130
+        num_eta  = 130
+        num_zeta = 1
+    elif res.lower() == "high":
+        rom_matrices_filename="../../lid_driven_data/rom_Re17000hr_" + method + "_s500m" + str(modes) + ".npz"
+        mat2=mio.loadmat(data_folder + "weights_hr.mat")
+        weights=np.ndarray.flatten(mat2['W'])
+        mat2=mio.loadmat(data_folder + "Xi_hr.mat")
+        Xi=np.ndarray.flatten(mat2['Xi'])
+        mat2=mio.loadmat(data_folder + "Eta_hr.mat")
+        Eta=np.ndarray.flatten(mat2['Eta'])
+        centroid_file=np.load(data_folder + "cell_center_high_res.npz")
     
-    cell_centroid=np.zeros((258,258,1,2))
-    cell_centroid[:,:,0,0]=cell_center_x
-    cell_centroid[:,:,0,1]=cell_center_y
+        num_dim  = 2
+        num_xi   = 258
+        num_eta  = 258
+        num_zeta = 1
+    
+   
+    Xi=Xi[0:(num_xi*num_eta)]
+    Eta=Eta[0:(num_xi*num_eta)]
+    weights = weights[0:(num_xi*num_eta)]
+    cell_centroid=np.zeros((num_xi,num_eta,num_zeta,num_dim))
+    cell_centroid[:,:,0,0] = centroid_file['cell_center_x']
+    cell_centroid[:,:,0,1] = centroid_file['cell_center_y']
+    num_cell = num_xi*num_eta*num_zeta
 
    
-    num_dim  = 2
-    num_xi   = 258
-    num_eta  = 258
-    num_zeta = 1
-    num_cell = 66564
     Zeta=np.zeros((Xi.shape[0],),dtype='int')
     
     
@@ -98,11 +121,11 @@ def main(argv=None):
            "phi": phi,
            "modal_coeff": modal_coeff,
            "vel_0_2D": vel_0_2D,
-           "reynolds_number": 25000}
+           "reynolds_number": 17000}
     
     x_boundary = np.linspace(-1,1, num_xi)
     x_boundary_reduced = np.array([0, 50, 128, 150])#np.arange(0,num_xi,50)
-    boundary_vec_base = (abs(x_boundary-1)**2)*(abs(x_boundary+1)**2)
+    boundary_vec_base = (abs(x_boundary-1)**(2*alpha_value))*(abs(x_boundary+1)**(2*alpha_value))
     boundary_vec_reduced = boundary_vec_base[x_boundary_reduced]
     
     
@@ -115,12 +138,20 @@ def main(argv=None):
     evalFcnReduced = lambda POI: RunROMreduced(POI, x_boundary_reduced, QOI_type,\
                                                rom_matrices_filename, integration_times,\
                                                discretization, pod)
+    evalFcnExtended = lambda POI:RunROMextended(POI, x_boundary, QOI_type,\
+                                                rom_matrices_filename, integration_times,\
+                                                discretization, pod,10**penalty_exp)
     #Define model structure
     if POI_type.lower() == 'reduced':
         model=uq.model(evalFcn=evalFcnReduced,
                         basePOIs=boundary_vec_reduced,
                         POInames=x_boundary_reduced.astype(str)
                         )
+    elif POI_type.lower () == 'alpha':
+        model = uq.model(evalFcn = evalFcnExtended,
+                         basePOIs = alpha_value,
+                         POInames = np.array(["alpha"]))
+                
         
     else:
         model=uq.model(evalFcn=evalFcn,
@@ -267,140 +298,13 @@ def RunROMreduced(POIs, POI_position, QOIselector,rom_matrices_filename, integra
     
     return RunROM(boundary_vec, QOIselector,rom_matrices_filename, integration_times, \
                discretization, pod)
-
-
-def RunROM(POIs, QOIselector,rom_matrices_filename, integration_times, \
-           discretization, pod):
-    print("Running ROM")
     
-    #Unpack discretization
-    Xi = discretization["Xi"]
-    Eta = discretization["Eta"]
-    Zeta = discretization["Zeta"]
-    cell_centroid = discretization["cell_centroid"]
-    num_cell = discretization["num_cell"]
-    weights_ND = discretization["weights_ND"]
-    
-    #Unpack pod
-    phi = pod["phi"]
-    modal_coeff = pod["modal_coeff"]
-    vel_0_2D = pod["vel_0_2D"]
-    reynolds_number = pod["reynolds_number"]
-    
-    #Unpack POIs
-    boundary_vec = POIs
-    
-    #Load ROM matrices
-    matrices = np.load(rom_matrices_filename)
-    L0_calc  = matrices['L0_calc']
-    LRe_calc = matrices['LRe_calc']
-    C0_calc  = matrices['C0_calc']
-    CRe_calc = matrices['CRe_calc']
-    Q_calc   = matrices['Q_calc']
+def RunROMextended(POI, x_boundary, QOI_type,rom_matrices_filename, \
+                   integration_times, discretization, pod, penalty_strength):
+    boundary_vec = (np.abs(1-x_boundary)**(2*POI))*(np.abs(1+x_boundary)**(2*POI))
+    return RunROM(boundary_vec, QOI_type, rom_matrices_filename, integration_times, \
+               discretization, pod, penalty_strength)
 
-
-    char_L = 1
-    #print(reynolds_number)
-    #Calculate ROM solution
-    #Initialize matrices
-    if boundary_vec.ndim == 2: 
-        for iSamp in range(boundary_vec.shape[0]):
-        
-            #Compute Boundary ROM matrices
-            (B_calc, B0_calc) = incrom.pod_rom_boundary_matrices_2d(\
-              Xi,
-              Eta,
-              Zeta,
-              cell_centroid,
-              num_cell,
-              phi,
-              weights_ND,
-              vel_0_2D, 
-              boundary_vec[iSamp])
-            #print('Reynolds Number before rom_calc_rk45:' + str(reynolds_number[iSamp]))
-            aT = incrom.rom_calc_rk45_boundary(\
-                    reynolds_number,
-                    char_L,
-                    L0_calc,
-                    LRe_calc,
-                    C0_calc,
-                    CRe_calc,
-                    Q_calc,
-                    B_calc,
-                    B0_calc,
-                    modal_coeff,
-                    integration_times,
-                    10^4)
-            
-           # print('Modal Coefficients at t=0'+str(aT[:,0]))
-           # print('Modal Coeffecients at t=tmax'+str(aT[:,-1]))
-           # print('Max mean_reduced_velocity:'+str(np.max(mean_reduced_velocity_rom)))
-           # print('Mean mean_reduced_velocity:'+ str(np.mean(mean_reduced_velocity_rom)))
-           # print()
-    
-            #Extract QOIs
-            if QOIselector.lower()=="full data":
-                #print(str(np.max(mean_reduced_velocity_rom)) + ', ' + str(np.mean(mean_reduced_velocity_rom)))       
-               # QOIs[iSamp,:]=mean_reduced_velocity_rom[:,-1]
-                mean_reduced_velocity_rom = np.matmul(phi, aT)
-                QOIs.append(mean_reduced_velocity_rom[:,-1])
-                del mean_reduced_velocity_rom
-            if QOIselector.lower()=="modal coeff":
-                QOIs.append(aT.flatten())
-            if QOIselector.lower() =="kinetic energy":
-                energy = np.sum(aT, axis = 0)
-                energy = energy[-1]
-                QOIs.append(energy)
-    elif boundary_vec.ndim == 1:
-        #Compute Boundary ROM matrices
-        (B_calc, B0_calc) = incrom.pod_rom_boundary_matrices_2d(\
-          Xi,
-          Eta,
-          Zeta,
-          cell_centroid,
-          num_cell,
-          phi,
-          weights_ND,
-          vel_0_2D, 
-          boundary_vec)
-        #print('Reynolds Number before rom_calc_rk45:' + str(reynolds_number[iSamp]))
-        aT = incrom.rom_calc_rk45_boundary(\
-                reynolds_number,
-                char_L,
-                L0_calc,
-                LRe_calc,
-                C0_calc,
-                CRe_calc,
-                Q_calc,
-                B_calc,
-                B0_calc,
-                modal_coeff,
-                integration_times,
-                10^4)
-        
-       # print('Modal Coefficients at t=0'+str(aT[:,0]))
-       # print('Modal Coeffecients at t=tmax'+str(aT[:,-1]))
-       # print('Max mean_reduced_velocity:'+str(np.max(mean_reduced_velocity_rom)))
-       # print('Mean mean_reduced_velocity:'+ str(np.mean(mean_reduced_velocity_rom)))
-       # print()
-
-        #Extract QOIs
-        if QOIselector.lower()=="full data":
-            #print(str(np.max(mean_reduced_velocity_rom)) + ', ' + str(np.mean(mean_reduced_velocity_rom)))       
-           # QOIs[iSamp,:]=mean_reduced_velocity_rom[:,-1]
-            mean_reduced_velocity_rom = np.matmul(phi, aT)
-            QOIs= mean_reduced_velocity_rom[:,-1].flatten()
-            del mean_reduced_velocity_rom
-        if QOIselector.lower()=="modal coeff":
-            QOIs = aT.flatten()
-            #QOIs=aT[:,-1]
-        if QOIselector.lower() =="kinetic energy":
-            energy = np.sum(aT, axis = 0)
-            energy = energy[[-1]]
-            QOIs = energy
-    else:
-        raise Exception("More than 2 dimensions detected for boundary vector")
-    return QOIs.flatten()
 
 if __name__ == "__main__":
     sys.exit(main())

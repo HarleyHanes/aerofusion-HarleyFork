@@ -16,26 +16,27 @@ from compute_vorticity import Vorticity_2D
 
 def main(argv=None):
     # Run Settings
-    penalty = 10.0 ** np.array([-15, -2, 4, 6])
+    penalty = 10.0 ** np.array([-15, -2, 2])
     alpha = np.array([1, .5, .1, .01])
     tmax= 50
     snapshots=500
-    modes = 50
+    modes = 100
     fig_size=(20,16)
-    res = "low"
-    plot_data = "vorticity reduced"
+    res = "high"
+    method = "mean"
+    plot_data = "vorticity"
     plot_style =  "heat"   #stream heat
     
     #Define file locations
     if res.lower() == "high":
         data_folder = "../../lid_driven_data/"
-        pod_filename = "pod_lid_driven_50.npz"
-        plot_folder = "../../lid_driven_snapshots/extended_analysis/"
-        rom_filename = "rom_matrices_s500_m50.npz"
+        pod_filename = "pod_Re17000hr_"+ method+ "_s500m100.npz"
+        plot_folder = "../../lid_driven_snapshots/"+ method+ "_u0/"
+        rom_filename = "rom_Re17000hr_"+ method+ "_s500m"+ str(modes) + ".npz"
     elif res.lower() == "low":
         data_folder = "../../lid_driven_data/"
-        pod_filename="pod_Re20000lr_art_s500m100.npz"
-        plot_folder = "../../lid_driven_snapshots/artificial_u0/"
+        pod_filename="pod_Re20000lr_"+ method+ "_s500m100.npz"
+        plot_folder = "../../lid_driven_snapshots/"+ method+ "_u0/"
         rom_filename= "rom_art_s500m" + str(modes) + ".npz"
     
     # Define Integration Times
@@ -84,8 +85,8 @@ def main(argv=None):
         base_vec = np.linspace(-1,1,num = num_xi)
         zeta=np.zeros((Xi.shape[0],),dtype='int')
     elif res.lower()=="high":
-        mat2=mio.loadmat(data_folder + "w_HiRes.mat")
-        weights=np.ndarray.flatten(mat2['w'])
+        mat2=mio.loadmat(data_folder + "weights_hr.mat")
+        weights=np.ndarray.flatten(mat2['W'])
         mat2=mio.loadmat(data_folder + "Xi_hr.mat")
         Xi=np.ndarray.flatten(mat2['Xi'])
         mat2=mio.loadmat(data_folder + "Eta_hr.mat")
@@ -135,9 +136,12 @@ def main(argv=None):
         # Make Figure
         fig = plt.figure(figsize = fig_size)
         # Loop Through Boundary Cases
+        print("Penalty: " + str(penalty[iPenalty]))
         for iAlpha in range(len(alpha)):
+            print("Alpha: " + str(alpha[iAlpha]))
             #Define boundary
             boundary_vec=(np.abs(1-base_vec)**(2*alpha[iAlpha]))*(np.abs(1+base_vec)**(2*alpha[iAlpha]))
+            
             # Compute Penalty Rom Matrices
             (B_calc, B0_calc) = incrom.pod_rom_boundary_matrices_2d(\
               Xi,
@@ -151,7 +155,7 @@ def main(argv=None):
               boundary_vec) 
             # Solve for modal coeffecients
             aT = incrom.rom_calc_rk45_boundary(\
-                    25000,
+                    17000,
                     1,
                     L0_calc,
                     LRe_calc,
@@ -179,6 +183,7 @@ def main(argv=None):
             if plot_data.lower() == "v reduced":
                 data = vel_rom_2D[:,:,1]
             if plot_data.lower() == "vorticity":
+                #data = Vorticity_2D(vel_0_2D)
                 data = Vorticity_2D(vel_0_2D + vel_rom_2D)
             if plot_data.lower() == "u":
                 data = vel_0_2D[:,:,0] + vel_rom_2D[:,:,0]

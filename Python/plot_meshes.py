@@ -15,8 +15,25 @@ import scipy.io as mio
 
 def main(argv=None):
     #Variables to load
-    filename = "../../lid_driven_snapshots/full data/results_lsa.npz"
-    num_points = [20, 129, -2]
+    method = "art"
+    POI_type = "alpha"
+    QOI_type = "vorticity"
+    modes = 100
+    tmax = 100
+    penalty_exp=2
+    
+    #filename = "../../lid_driven_snapshots/full data/results_lsa.npz"
+    if POI_type.lower() == "point":
+        num_points = [20, 129, -2]
+    elif POI_type.lower() == "alpha":
+        alpha_value = .01
+        
+    data_folder = "../../lid_driven_data/"
+    pod_filename="pod_Re17000hr_"+method+"_s500m100.npz"
+    filename = "../../lid_driven_data/" + method + "_" + QOI_type + "_a" + str(alpha_value) + "_s500m" + str(modes) + "_results_lsa.npz"
+    plot_folder = "../../lid_driven_snapshots/" + method + "_u0/sens/"
+    plot_name = "sens_abs_" + QOI_type + "_a" + str(alpha_value) + "_s500m" + str(modes) + "_p" + str(penalty_exp)+"_t="+ str(tmax) + ".png"
+        
     #Loop through modes
     results = np.load(filename)
     jac = results["sensitivities"]
@@ -25,13 +42,9 @@ def main(argv=None):
     #rom_matrices_filename="../../lid_driven_penalty/rom_matrices_50.npz"
     #penalty=10.0**4 penalty defined explicitly in function
     #QOI_type = "full data"
-    tmax=50
-    penalty_exp=4
     
 
-    data_folder = "../../lid_driven_snapshots/"
-    plot_folder = "../../lid_driven_snapshots/full data/"
-    pod_data = np.load(data_folder + 'pod_lid_driven_50.npz')
+    pod_data = np.load(data_folder + pod_filename)
     # Assign data to convenience variables
     #vel_0  = pod_data['velocity_mean']
     #simulation_time = pod_data['simulation_time']
@@ -40,7 +53,7 @@ def main(argv=None):
     
     #Get solution
     sol = np.matmul(phi, modal_coeff)
-    integration_index = 499
+    integration_index = tmax*10-1
     
     #Specify when integration takes place 
     #integration_times = np.arange(.1,tmax,.1)
@@ -55,21 +68,18 @@ def main(argv=None):
     Xi=np.ndarray.flatten(mat2['Xi'])
     mat2=mio.loadmat(data_folder + "Eta_hr.mat")
     Eta=np.ndarray.flatten(mat2['Eta'])
-    mat2=mio.loadmat(data_folder + "C_x_hr.mat")
-    cell_center_x=mat2['C']
-    mat2=mio.loadmat(data_folder + "C_y_hr.mat")
-    cell_center_y=mat2['C2']
+    centroid_file=np.load(data_folder + "cell_center_high_res.npz")
     
-    cell_centroid=np.zeros((258,258,1,2))
-    cell_centroid[:,:,0,0]=cell_center_x
-    cell_centroid[:,:,0,1]=cell_center_y
-
    
     num_dim  = 2
     num_xi   = 258
     num_eta  = 258
-    #num_zeta = 1
+    num_zeta = 1
     num_cell = 66564
+    
+    cell_centroid=np.zeros((num_xi,num_eta,num_zeta,num_dim))
+    cell_centroid[:,:,0,0] = centroid_file['cell_center_x']
+    cell_centroid[:,:,0,1] = centroid_file['cell_center_y']
     #Zeta=np.zeros((Xi.shape[0],),dtype='int')
     
     
@@ -77,20 +87,36 @@ def main(argv=None):
     Eta_mesh=Eta.reshape((num_eta, num_xi))
     Xi_mesh = (Xi_mesh- (num_xi-1)/2)/(num_xi/2)
     Eta_mesh = (Eta_mesh- (num_eta-1)/2)/(num_eta/2)
-    #Convert to 2D
+    #-------------------------------Get 2D data------------------------------
+    weights_ND = np.zeros([num_cell*num_dim])
+    for i_dim in range(num_dim):
+        weights_ND[i_dim*num_cell : (i_dim+1)*num_cell] = weights
+    #Parse data
+    if QOI_type.lower() == "vorticity":
+        data_1D = jac[:,0]
+    else:
+        raise(Exception("Plotting currently deprecated except for vorticity, see commented sections"))
+    #Convert Data to 2D
+    data_2D = arr_conv.array_1D_to_2D(Xi, Eta, num_xi, num_eta, data_1D)
+    
+    #-----------------------------Plot---------------------------------------
+    plot_pcolormesh(\
+      Xi_mesh,
+      Eta_mesh,
+      np.abs(data_2D),
+      plot_folder + plot_name,
+      vmin = 0,
+      vmax = np.abs(np.max(data_2D)),
+      colorbar_label= QOI_type,
+      font_size = 30)
+''' 
     #Seperate Dimensions
     jac_1D = np.empty((num_cell, num_dim, jac.shape[1]))
     sol_1D = np.empty((num_cell, num_dim))
     for iTime in range(jac.shape[1]):
         jac_1D[:,:,iTime] = np.reshape(jac[:, iTime], (num_cell, num_dim), order = 'F')
     sol_1D[:,:] = np.reshape(sol[:, integration_index], (num_cell, num_dim), order= 'F')
-    
-    weights_ND = np.zeros([num_cell*num_dim])
-    for i_dim in range(num_dim):
-      weights_ND[i_dim*num_cell : (i_dim+1)*num_cell] = weights
-    
-    
-    
+       
     jac_2D=np.empty((num_xi, num_eta, num_dim, jac.shape[1]))
     sol_2D=np.empty((num_xi, num_eta, num_dim))
     for i_dim in range(num_dim):
@@ -188,5 +214,7 @@ def main(argv=None):
           "auto",
           colorbar_label= 'v reduced sensitivity',
           font_size = 30)
+'''
+
 if __name__ == "__main__":
     sys.exit(main())
