@@ -38,14 +38,17 @@ import scipy.io as mio
 def main(argv=None):
 
     
-    rom_matrices_filename="rom_art_s500m200.npz"
-    data_folder = "../../lid_driven_data/"
-    pod_filename="pod_Re20000lr_art_s500m200.npz"
-    data_filename = "re20000_lr.mat"
-    
     verify = True
+    method = "mean"
     penalty=10.0**4
-    modes = 200      #number of modes to use (starting with 1)
+    modes = 100      #number of modes to use (starting with 1)
+    
+    rom_matrices_filename="rom_Re17000hr_"+method+"_s500m"+ str(modes) + ".npz"
+    data_folder = "../../lid_driven_data/"
+    pod_filename="pod_Re17000hr_"+method+"_s500m100.npz"
+    data_filename = "re17000_hr.mat"
+    res = "high"
+    
     
     #Define Boundary Function 
     boundaryFcn= lambda x: (np.abs(x-1))**2*(np.abs(x+1))**2
@@ -68,20 +71,35 @@ def main(argv=None):
     #integration_times = simulation_time[integration_indices]
     num_time = len(integration_times)
     
-    mat2=mio.loadmat(data_folder + "w_LowRes.mat")
-    weights=np.ndarray.flatten(mat2['w'])
-    mat2=mio.loadmat(data_folder + "Xi_lr.mat")
-    Xi=np.ndarray.flatten(mat2['Xi'])
-    mat2=mio.loadmat(data_folder + "Eta_lr.mat")
-    Eta=np.ndarray.flatten(mat2['Eta'])
-    centroid_file=np.load(data_folder + "cell_center_low_res.npz")
-
-  
-    num_dim  = 2
-    num_xi   = 130
-    num_eta  = 130
-    num_zeta = 1
-   
+    if res.lower() == "low":
+        mat2=mio.loadmat(data_folder + "w_LowRes.mat")
+        weights=np.ndarray.flatten(mat2['w'])
+        mat2=mio.loadmat(data_folder + "Xi_lr.mat")
+        Xi=np.ndarray.flatten(mat2['Xi'])
+        mat2=mio.loadmat(data_folder + "Eta_lr.mat")
+        Eta=np.ndarray.flatten(mat2['Eta'])
+        centroid_file=np.load(data_folder + "cell_center_low_res.npz")
+    
+      
+        num_dim  = 2
+        num_xi   = 130
+        num_eta  = 130
+        num_zeta = 1
+    elif res.lower() == "high":
+        mat2=mio.loadmat(data_folder + "w_HiRes.mat")
+        weights=np.ndarray.flatten(mat2['w'])
+        mat2=mio.loadmat(data_folder + "Xi_hr.mat")
+        Xi=np.ndarray.flatten(mat2['Xi'])
+        mat2=mio.loadmat(data_folder + "Eta_hr.mat")
+        Eta=np.ndarray.flatten(mat2['Eta'])
+        centroid_file=np.load(data_folder + "cell_center_high_res.npz")
+    
+      
+        num_dim  = 2
+        num_xi   = 258
+        num_eta  = 258
+        num_zeta = 1
+       
     Xi=Xi[0:(num_xi*num_eta)]
     Eta=Eta[0:(num_xi*num_eta)]
     weights = weights[0:(num_xi*num_eta)]
@@ -103,7 +121,11 @@ def main(argv=None):
     boundary_vec=boundaryFcn(Xi_mesh[0,:])
     
     #Load True Deta
-    mat2=mio.loadmat(data_folder + data_filename)
+    if res.lower() == "low":
+        mat2=mio.loadmat(data_folder + data_filename)
+    elif res.lower() == "high":
+        mat2=mat73.loadmat(data_folder + data_filename)
+        
     vel_true = mat2['X']
     vel_true = vel_true[:,integration_indices]
     

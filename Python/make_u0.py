@@ -113,10 +113,10 @@ def main():
     fMesh += 2.3*eddyStrength*expRBF(-.8, .8, Xi_mesh, Eta_mesh, COVTL1, locality*.2)
     fMesh +=  .6*eddyStrength*expRBF(-.95, .59, Xi_mesh, Eta_mesh, COVTL2, locality)
     #Add Boundary Flows
-    fMesh+=fBCcurve(1,1,Xi_mesh, Eta_mesh)
-    fMesh+=fBCcurve(1,-1,Xi_mesh, Eta_mesh)
-    fMesh+=fBCcurve(-1,1,Xi_mesh, Eta_mesh)
-    fMesh+=fBCcurve(-1,-1,Xi_mesh, Eta_mesh)
+    #fMesh+=fBCcurve(1,1,Xi_mesh, Eta_mesh)
+    #fMesh+=fBCcurve(1,-1,Xi_mesh, Eta_mesh)
+    #fMesh+=fBCcurve(-1,1,Xi_mesh, Eta_mesh)
+    #fMesh+=fBCcurve(-1,-1,Xi_mesh, Eta_mesh)
     print("Mean: " + str(np.mean(fMesh)))
     print("Max: "  + str(np.max(fMesh)))
     
@@ -140,18 +140,18 @@ def main():
     u = np.gradient(fMesh, axis = 0)
     #Apply BC
     #Bottom BC
-    u[0,:]=0
-    v[0,:]=0
-    u[:,0] = 0
-    v[:,0] = 0
-    u[:,-1] = 0
-    v[:,-1] = 0
-    u[-1,:] = np.max(np.abs(u))    #Use max value so since it will be rescaled 
-    v[-1,:] = 0
+    # u[0,:]=0
+    # v[0,:]=0
+    # u[:,0] = 0
+    # v[:,0] = 0
+    # u[:,-1] = 0
+    # v[:,-1] = 0
+    # u[-1,:] = np.max(np.abs(u))    #Use max value so since it will be rescaled 
+    # v[-1,:] = 0
     
     #Rescale BC velocity
-    u = u/(u[-1,0])
-    v = v/(u[-1,0])
+    #u = u/(u[-1,0])
+    #v = v/(u[-1,0])
     
     #Reapply top BC
     print("u_inf difference before fixing: " + str(1-u[-1,0]))
