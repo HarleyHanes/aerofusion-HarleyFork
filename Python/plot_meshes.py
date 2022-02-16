@@ -4,6 +4,7 @@ import os
 import UQtoolbox as uq
 import aerofusion.data.array_conversion as arr_conv
 from aerofusion.rom import incompressible_navier_stokes_rom as incrom
+from aerofusion.numerics import curl_calc as curl_calc
 import numpy as np
 import logging
 import argparse
@@ -32,11 +33,10 @@ def main(argv=None):
     pod_filename="pod_Re17000hr_"+method+"_s500m100.npz"
     filename = "../../lid_driven_data/" + method + "_" + QOI_type + "_a" + str(alpha_value) + "_s500m" + str(modes) + "_results_lsa.npz"
     plot_folder = "../../lid_driven_snapshots/" + method + "_u0/sens/"
+    #plot_folder = "../../lid_driven_snapshots/" + method + "_u0/"
     plot_name = "sens_abs_" + QOI_type + "_a" + str(alpha_value) + "_s500m" + str(modes) + "_p" + str(penalty_exp)+"_t="+ str(tmax) + ".png"
-        
-    #Loop through modes
-    results = np.load(filename)
-    jac = results["sensitivities"]
+    #plot_name = QOI_type + "_s500m" + str(modes) + ".png" 
+    
     
     #Load mesh data
     #rom_matrices_filename="../../lid_driven_penalty/rom_matrices_50.npz"
@@ -46,7 +46,7 @@ def main(argv=None):
 
     pod_data = np.load(data_folder + pod_filename)
     # Assign data to convenience variables
-    #vel_0  = pod_data['velocity_mean']
+    vel_0  = pod_data['velocity_mean']
     #simulation_time = pod_data['simulation_time']
     phi             = pod_data['phi']
     modal_coeff     = pod_data['modal_coeff']
@@ -93,11 +93,26 @@ def main(argv=None):
         weights_ND[i_dim*num_cell : (i_dim+1)*num_cell] = weights
     #Parse data
     if QOI_type.lower() == "vorticity":
+        #Loop through modes
+        results = np.load(filename)
+        jac = results["sensitivities"]
         data_1D = jac[:,0]
+        #Convert Data to 2D
+        data_2D = arr_conv.array_1D_to_2D(Xi, Eta, num_xi, num_eta, data_1D)
+    elif QOI_type.lower() == "u0 vorticity":
+        vel_1D_compact = vel_0
+        #convert to 1D
+        vel_1D = np.reshape(vel_1D_compact, (num_cell, 2), order = "F")
+        #convert to 2D
+        vel_2D = np.zeros((num_xi, num_eta, 2))
+        for i_dim in range(2):
+              vel_2D[:,:,i_dim] = arr_conv.array_1D_to_2D(\
+                Xi, Eta, num_xi, num_eta, vel_1D[:,i_dim])
+        #calculate vorticity
+        data_2D = curl_calc.curl_2d(-cell_centroid[:,0,0,1], -cell_centroid[0,:,0,0],
+          vel_2D[:, :, 0], vel_2D[:, :,1])
     else:
         raise(Exception("Plotting currently deprecated except for vorticity, see commented sections"))
-    #Convert Data to 2D
-    data_2D = arr_conv.array_1D_to_2D(Xi, Eta, num_xi, num_eta, data_1D)
     
     #-----------------------------Plot---------------------------------------
     plot_pcolormesh(\
@@ -105,8 +120,8 @@ def main(argv=None):
       Eta_mesh,
       np.abs(data_2D),
       plot_folder + plot_name,
-      vmin = 0,
-      vmax = np.abs(np.max(data_2D)),
+      vmin = "auto", #-np.max(np.abs(data_2D)),
+      vmax = "auto", #np.max(np.abs(data_2D)),
       colorbar_label= QOI_type,
       font_size = 30)
 ''' 

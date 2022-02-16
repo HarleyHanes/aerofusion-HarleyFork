@@ -35,11 +35,11 @@ from aerofusion.pod import pod_modes
 #from aerofusion.plot.plot_2D import plot_contour
 #from aerofusion.numerics import derivatives_curvilinear_grid as curvder
 #from aerofusion.numerics import curl_calc as curl_calc
-#import mat73
+import mat73
 
 data_folder = "../../lid_driven_data/"
 res = "high"
-u0_type = "artificial"
+u0_type = "mean"
 if u0_type.lower() == "artificial":
     u0_file = "vel_artificial.npz"
 modes = 100
@@ -51,19 +51,20 @@ if res.lower() == "low":
     pod_file = data_folder + "pod_Re20000lr_s500m" + str(modes)
     num_xi   = 130
     num_eta  = 130
-elif res.upper() == "high":
-    weights_file = "w_HiRes.mat"
+    mat = mio.loadmat(data_folder + velocity_file)
+elif res.lower() == "high":
+    weights_file = "weights_hr.mat"
     velocity_file = "re17000_hr.mat"
-    pod_file = data_folder + "pod_Re17000hr_s500m" + str(modes)
+    pod_file = data_folder + "pod_Re17000hr_mean_s500m" + str(modes)
     num_xi   = 258
     num_eta  = 258
+    mat = mat73.loadmat(data_folder + velocity_file)
     
 print("Loading Data")
-mat = mio.loadmat(data_folder + velocity_file)
 velocity_1D_compact=mat['X'][:]
 mat2 = mio.loadmat(data_folder + weights_file)
-weights = np.ndarray.flatten(mat2['w'])
-
+weights = np.ndarray.flatten(mat2['W'])
+weights_ND = np.repeat(weights.reshape(weights.size,1), 2, axis=1).transpose().flatten()
 
 
 simulation_time = np.zeros((t_iter,))
@@ -98,7 +99,7 @@ for i_snap in range(num_snapshots):
     
 (phi, modal_coeff, pod_lambda) = pod_modes.Find_Modes(\
     mean_reduced_velocity,
-    weights,
+    weights_ND,
     modes)
 
 

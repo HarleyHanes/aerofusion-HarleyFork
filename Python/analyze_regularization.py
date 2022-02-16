@@ -18,12 +18,12 @@ def main(argv=None):
     # Run Settings
     penalty = 10.0 ** np.array([-15, -2, 2])
     alpha = np.array([1, .5, .1, .01])
-    tmax= 50
+    tmax= 100
     snapshots=500
     modes = 100
     fig_size=(20,16)
     res = "high"
-    method = "mean"
+    method = "art"
     plot_data = "vorticity"
     plot_style =  "heat"   #stream heat
     
@@ -130,6 +130,9 @@ def main(argv=None):
       weights_ND[i_dim*num_cell : (i_dim+1)*num_cell] = weights
       vel_0_2D[:,:,i_dim] = arr_conv.array_1D_to_2D(\
           Xi, Eta, num_xi, num_eta, vel_0_1D[:,i_dim])
+          
+    # if method.lower == "mean":
+    #     vel_0_2D = np.rot90(vel_0_2D, k=2, axes=(0,1))
     
     # Loop Through Penalty Cases
     for iPenalty in range(len(penalty)):
@@ -183,6 +186,7 @@ def main(argv=None):
             if plot_data.lower() == "v reduced":
                 data = vel_rom_2D[:,:,1]
             if plot_data.lower() == "vorticity":
+                #data = vel_0_2D[:,:,0]
                 #data = Vorticity_2D(vel_0_2D)
                 data = Vorticity_2D(vel_0_2D + vel_rom_2D)
             if plot_data.lower() == "u":
@@ -204,21 +208,24 @@ def main(argv=None):
                              cmap = "jet",
                              vmin= -np.max(np.abs(data)),
                              vmax= np.max(np.abs(data)))
-                fig.colorbar(im, label = plot_data)
+                if iAlpha == 1 or iAlpha ==3:
+                    fig.colorbar(im, label = plot_data)
+                else: 
+                    fig.colorbar(im)
             elif plot_style.lower() == "stream":
                 ax.streamplot(Xi_mesh, Eta_mesh, vel_rom_2D[:,:,0], vel_rom_2D[:,:,1],\
                               density = [.5, 1])
-            if iAlpha%2 == 0:
+            if iAlpha==2 or iAlpha ==0:
                 ax.set_ylabel("y")
-            if (iAlpha == len(penalty)-1) + (iAlpha == len(penalty)-2):
+            if iAlpha==2 or iAlpha ==3:
                 ax.set_xlabel("x")
             ax.set_title("a=" + str(alpha[iAlpha]))
         #save figure
         plt.savefig(plot_folder + "/extended_boundary_" + plot_style.lower() + "_s" 
-                    + str(snapshots) + "m" + str(modes) + "t"  + str(tmax) + \
-                    "_" + str(plot_data) + "_penalty=" + \
-                    str(int(np.log10(penalty[iPenalty]))) +".png")
-    
+                        + str(snapshots) + "m" + str(modes) + "t"  + str(tmax) + \
+                        "_" + str(plot_data) + "_penalty=" + \
+                        str(int(np.log10(penalty[iPenalty]))) +".png")
+        
     
     
     

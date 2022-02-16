@@ -8,6 +8,7 @@ import scipy.io as mio
 import numpy as np
 import matplotlib.pyplot as plt
 import aerofusion.data.array_conversion as arr_conv
+from aerofusion.numerics import curl_calc as curl_calc
 
 def main():
     #File settings
@@ -110,8 +111,8 @@ def main():
     fMesh += .8*eddyStrength*expRBF(-.88, -.65, Xi_mesh, Eta_mesh, COVBL2, locality*2)
     fMesh += .8*eddyStrength*expRBF(-.85, -.85, Xi_mesh, Eta_mesh, COVBL1, locality*.4)
     
-    fMesh += 2.3*eddyStrength*expRBF(-.8, .8, Xi_mesh, Eta_mesh, COVTL1, locality*.2)
-    fMesh +=  .6*eddyStrength*expRBF(-.95, .59, Xi_mesh, Eta_mesh, COVTL2, locality)
+    fMesh += 4.6*eddyStrength*expRBF(-.8, .8, Xi_mesh, Eta_mesh, COVTL1, locality*.2)
+    fMesh +=  1.2*eddyStrength*expRBF(-.95, .59, Xi_mesh, Eta_mesh, COVTL2, locality)
     #Add Boundary Flows
     #fMesh+=fBCcurve(1,1,Xi_mesh, Eta_mesh)
     #fMesh+=fBCcurve(1,-1,Xi_mesh, Eta_mesh)
@@ -156,13 +157,11 @@ def main():
     #Reapply top BC
     print("u_inf difference before fixing: " + str(1-u[-1,0]))
     #u[-1,:] = 1
-    #----------------------------------Compute Vorticity
-    dvdx = np.gradient(v, axis = 1)
-    #Comput du/dy
-    dudy = np.gradient(u, axis = 0)
     
     #----------------------------------- Plot Voriticity and Velocity ----------
-    vorticity = dvdx-dudy
+    
+    vorticity= curl_calc.curl_2d(-cell_centroid[:,0,0,1], -cell_centroid[0,:,0,0],
+      u, v)
     im = plt.pcolormesh(\
                 Xi_mesh,
                 Eta_mesh,

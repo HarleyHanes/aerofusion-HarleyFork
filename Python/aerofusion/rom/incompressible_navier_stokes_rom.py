@@ -844,7 +844,7 @@ def RHS_rk45_boundary(t, a, Re, char_L, L0, LRe, C0, CRe, Q, B, B0, penalty):
   for i_modes in range(num_modes):
     rhs[i_modes] = rhs[i_modes] + np.matmul(np.matmul(aT, Q[i_modes,:,:]), a)
   t_end = time.time()
-  print(t)
+  #print(t)
   #print('DEBUG in RHS of rk45', t_end - t_begin)
   return rhs
 

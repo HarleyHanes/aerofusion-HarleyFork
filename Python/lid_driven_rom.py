@@ -39,7 +39,7 @@ def main(argv=None):
 
     
     verify = True
-    method = "mean"
+    method = "art"
     penalty=10.0**4
     modes = 100      #number of modes to use (starting with 1)
     
@@ -242,45 +242,8 @@ def main(argv=None):
         plt.colorbar(location='right', anchor=(0, 0.3), shrink=0.7)
         plt.title('Mean Velocity')
         plt.show()
-        
-        # #Check Defined boundary velocities
-        # plt.plot(boundary_2D[0,:,0])
-        # plt.plot(boundary_2D[-1,:,0])
-        # plt.plot(boundary_2D[:,0,0])
-        # plt.plot(boundary_2D[:,-1,0])
-        # plt.title("Boundary Values in V_Gamma")
-        # plt.ylabel("u")
-        # plt.legend(['Xi=-1', 'Xi=1', 'Eta=-1', 'Eta=1'])
-        # plt.show()
-        # plt.plot(boundary_2D[0,:,1])
-        # plt.plot(boundary_2D[-1,:,1])
-        # plt.plot(boundary_2D[:,0,1])
-        # plt.plot(boundary_2D[:,-1,1])
-        # plt.title("Boundary Values in V_Gamma")
-        # plt.ylabel("v")
-        # plt.legend(['Xi=-1', 'Xi=1', 'Eta=-1', 'Eta=1'])
-        # plt.show()
-        
-        # #Check Mean boundary velocities
-        # plt.plot(vel_0_boundary_2D[0,:,0])
-        # plt.plot(vel_0_boundary_2D[-1,:,0])
-        # plt.plot(vel_0_boundary_2D[:,0,0])
-        # plt.plot(vel_0_boundary_2D[:,-1,0])
-        # plt.title("Boundary Values in V0")
-        # plt.ylabel("u")
-        # plt.legend(['Xi=-1', 'Xi=1', 'Eta=-1', 'Eta=1'])
-        # plt.show()
-        # plt.plot(vel_0_boundary_2D[0,:,1])
-        # plt.plot(vel_0_boundary_2D[-1,:,1])
-        # plt.plot(vel_0_boundary_2D[:,0,1])
-        # plt.plot(vel_0_boundary_2D[:,-1,1])
-        # plt.title("Boundary Values in V0")
-        # plt.ylabel("v")
-        # plt.legend(['Xi=-1', 'Xi=1', 'Eta=-1', 'Eta=1'])
-        # plt.show()
-        
     
-    # #Code to run for multiple penalty values
+    
     
     if type(penalty)==np.ndarray:
         #Intialize aT
@@ -507,7 +470,7 @@ def main(argv=None):
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,1,498]-(vel_0_2D[:,:,1]+vel_pod_2D[:,:,1,498]),
-          data_folder + 'v_vel_pod_error_t5499_m' + str(modes) + '.png',
+          data_folder + 'v_vel_pod_error_t499_m' + str(modes) + '.png',
           "auto",
           "auto",
           "auto")            

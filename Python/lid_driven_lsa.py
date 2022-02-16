@@ -19,10 +19,10 @@ from boundary_rom import BoundaryPenaltyROM as RunROM
 def main(argv=None):
     QOI_type = "vorticity"
     POI_type= "alpha"   #unreduced
-    alpha_value = np.array([1])
+    alpha_value = np.array([.01])
     modes = 100
     res = "high"
-    method = "mean"
+    method = "art"
     #penalty=10.0**4 penalty defined explicitly in function
     tmax=100
     penalty_exp = 2
