@@ -9,9 +9,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import aerofusion.data.array_conversion as arr_conv
 from aerofusion.numerics import curl_calc as curl_calc
+from aerofusion.plot.plot_2D import plot_pcolormesh
+from aerofusion.numerics.derivatives import Find_Derivative_FD
 
-def main(basis_vort_vec, basis_orient_vec, basis_location_vec, basis_extent_vec, \
-         Xi, Eta, Xi_mesh, Eta_mesh):
+def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
+         basis_extent_vec, Xi, Eta, Xi_mesh, Eta_mesh, cell_centroid, plot = False):
     
     num_dim  = 2
     num_xi   = Xi_mesh.shape[0]
@@ -21,75 +23,54 @@ def main(basis_vort_vec, basis_orient_vec, basis_location_vec, basis_extent_vec,
     
 
     num_cell = num_xi*num_eta*num_zeta
+
+    #Define Functions used to formulate each basis function and initialize velocity
+    radius = lambda xCent, yCent, x,y, COV: np.sqrt(\
+        COV[0,0]*(x-xCent)**2+(COV[0,1]+COV[1,0])*(y-yCent)*(x-xCent)+COV[1,1]*(y-yCent)**2)
+    expRBF = lambda xCent, yCent, x, y, COV: np.exp(radius(xCent,yCent,x,y, COV)**2)
+    
+    velocity_2D = np.zeros((num_xi, num_eta, num_dim))
     
 
-    
-    #Make functions functions
-    fMesh = np.zeros(Xi_mesh.shape)
     for i_basis in range(len(basis_vort_vec)):
+            #load in parameters for previty
+            orient = basis_orient_vec[i_basis]
+            max_vort = basis_vort_vec[i_basis]
+            x0 = basis_x_loc_vec[i_basis]
+            y0 = basis_y_loc_vec[i_basis]
+            rel_extent = basis_extent_vec[i_basis]
             
-        #Make functions functions
-        fMesh = np.zeros(Xi_mesh.shape)
-        locality = 200
-        eddyStrength = 3
-        COV0 = np.array([[1,0],[0,1]])
-        COVBL1 = np.array([[1,0],[1.6,1]])
-        COVBL2 = np.array([[1,.9],[.9,1]])
-        
-        COVTL1 = np.array([[1,0],[.5,2]])
-        COVTL2 = np.array([[5,0],[0,1]])
-        
-        COVBR1 = np.array([[1,-.8],[-.8,1]])
-        COVBR2 = np.array([[1,0],[-2,3]])
-        #COVBR2 = np.array([[1,-.99],[-.99,1]])
-        #Helper Function
-        radius = lambda xCent, yCent, x,y, COV: np.sqrt(\
-            COV[0,0]*(xCent-x)**2+(COV[0,1]+COV[1,0])*(yCent-y)*(xCent-x)+COV[1,1]*(yCent-y)**2)
-        expRBF = lambda xCent, yCent, x, y, COV, locality : np.exp(-locality*radius(xCent,yCent,x,y, COV)**2)
-        #invRBF = lambda xCent, yCent, x, y, locality : 1/(1+locality * radius(xCent,yCent,x,y))
-        #polyRBF = lambda xCent, yCent, x, y, locality : radius
-        #Center Flow
-        #fCenterFlow = lambda x,y: 2-(x**2+y**2) #np.exp(-(np.abs(x)**2+ np.abs(y)**2))
-        #Top Left Flow
-        fBCcurve = lambda xCent, yCent, x,y: np.log((1/np.abs(xCent-x)*(1/np.abs(yCent-y)))**63)/200
-        #fCenterFlow = lambda x,y: np.exp(-np.abs((x)*(y)))
+            #Formulate covariance matrix
+            axis_length = np.array([[rel_extent, 0], [0, 1]])
+            rotation = np.array([[np.sin(orient), -np.cos(orient)],\
+                                 [np.cos(orient), np.sin(orient)]])
+            cov = np.matmul(np.matmul(rotation.transpose(), axis_length), rotation)
             
-        #Add Circular Flows
-        #fMesh+=fCenterFlow(Xi_mesh, Eta_mesh)
-        # #fMesh+=fTLflow(Xi_mesh,Eta_mesh)
-        # fMesh += eddyStrength*invRBF(.85, -.85, Xi_mesh, Eta_mesh, locality)
-        # fMesh += eddyStrength*invRBF(-.85, -.85, Xi_mesh, Eta_mesh, locality)
-        # fMesh += eddyStrength*invRBF(-.85, .85, Xi_mesh, Eta_mesh, locality)
-        
-        #fMesh += .3*eddyStrength*expRBF(.91, -.91, Xi_mesh, Eta_mesh, COVBR2, locality/1.5)
-        #fMesh += .3*eddyStrength*expRBF(.4, -.93, Xi_mesh, Eta_mesh, COVBR1, locality*3)
-        
-        fMesh += .8*eddyStrength*expRBF(.4, -.93, Xi_mesh, Eta_mesh, COVBR2, locality*.6)
-        fMesh += 1.5*eddyStrength*expRBF(.8, -.8, Xi_mesh, Eta_mesh, COVBR1, locality*.2)
-        
-        # fMesh += .3*eddyStrength*expRBF(.78, -.78, Xi_mesh, Eta_mesh, locality)
-        # fMesh += .3*eddyStrength*expRBF(.82, -.73, Xi_mesh, Eta_mesh, locality)
-        # fMesh += .3*eddyStrength*expRBF(.73, -.82, Xi_mesh, Eta_mesh, locality)
-        
-        fMesh += .8*eddyStrength*expRBF(-.88, -.65, Xi_mesh, Eta_mesh, COVBL2, locality*2)
-        fMesh += .8*eddyStrength*expRBF(-.85, -.85, Xi_mesh, Eta_mesh, COVBL1, locality*.4)
-        
-        fMesh += 4.6*eddyStrength*expRBF(-.8, .8, Xi_mesh, Eta_mesh, COVTL1, locality*.2)
-        fMesh +=  1.2*eddyStrength*expRBF(-.95, .59, Xi_mesh, Eta_mesh, COVTL2, locality)
-        #Add Boundary Flows
-        #fMesh+=fBCcurve(1,1,Xi_mesh, Eta_mesh)
-        #fMesh+=fBCcurve(1,-1,Xi_mesh, Eta_mesh)
-        #fMesh+=fBCcurve(-1,1,Xi_mesh, Eta_mesh)
-        #fMesh+=fBCcurve(-1,-1,Xi_mesh, Eta_mesh)
-    #-----------------------------------Convert to Velocity-----------------------
-    v = - np.gradient(fMesh, axis = 1)
-    u = np.gradient(fMesh, axis = 0)
+            #Formulate basis
+            basis_2D = expRBF(x0, y0, Xi_mesh, Eta_mesh, cov)
+            
+            #Convert stream function to vorticity
+            basis_vel_2D = np.empty(basis_2D.shape + (2,))
+            #Compute u and v
+            (dvar_dx, dvar_dy) = Find_Derivative_FD(basis_2D, cell_centroid, 2)
+            basis_vel_2D[:,:,0] = dvar_dy
+            basis_vel_2D[:,:,1] = - dvar_dx
+            
+            #Convert to vorticity 
+            vorticity = \
+              curl_calc.curl_2d(-cell_centroid[:,0,0,1], -cell_centroid[0,:,0,0],
+                basis_vel_2D[:,:,0], basis_vel_2D[:,:,1])
+            #Determine how much the voriticity would need to be scaled by so we
+            # can rescale the velocity by the same amount since their magnitudes
+            # follow scalar multiple relationship
+            prop_vort_change = np.max(np.abs(vorticity))/max_vort
+            basis_vel_2D = basis_vel_2D/ prop_vort_change
+            
+            velocity_2D += basis_vel_2D
+            
     
     #------------------------Get velocity_1D_compact
-    #Convert to 2D
-    velocity_2D = np.empty(u.shape + (2,))
-    velocity_2D[:,:,0] = u
-    velocity_2D[:,:,1] = v
+
     #Convert to 1D
     velocity_1D=np.empty((num_cell,2))
     for i in range(2):
@@ -105,6 +86,25 @@ def main(basis_vort_vec, basis_orient_vec, basis_location_vec, basis_extent_vec,
                                 Xi, Eta, num_xi, num_eta, check_velocity_1D[:,i])
     if np.max(check_velocity_2D-velocity_2D)>1e-10:
         raise(Exception("Array Conversion flawed"))
+    if plot:
+        plot_pcolormesh(\
+          Xi_mesh,
+          Eta_mesh,
+          velocity_2D[:,:,0],
+          "artificial_u0_vel",
+          vmin = "auto", #-np.max(np.abs(data_2D)),
+          vmax = "auto", #np.max(np.abs(data_2D)),
+          colorbar_label= "u",
+          font_size = 30)
+        plot_pcolormesh(\
+          Xi_mesh,
+          Eta_mesh,
+          velocity_2D[:,:,1],
+          "artificial_v0_vel",
+          vmin = "auto", #-np.max(np.abs(data_2D)),
+          vmax = "auto", #np.max(np.abs(data_2D)),
+          colorbar_label= "v",
+          font_size = 30)
 
     return(velocity_1D_compact, velocity_1D, velocity_2D)
 
