@@ -10,10 +10,11 @@ import matplotlib.pyplot as plt
 import aerofusion.data.array_conversion as arr_conv
 from aerofusion.numerics import curl_calc as curl_calc
 from aerofusion.plot.plot_2D import plot_pcolormesh
+from aerofusion.numerics.derivatives import FD_derivative_2nd_order
 from aerofusion.numerics.derivatives import Find_Derivative_FD
 
 def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
-         basis_extent_vec, Xi, Eta, Xi_mesh, Eta_mesh, cell_centroid, plot = False):
+         basis_extent_vec, Xi, Eta, Xi_mesh, Eta_mesh, cell_centroid, base_extent = 20, plot = False):
     
     num_dim  = 2
     num_xi   = Xi_mesh.shape[0]
@@ -27,12 +28,13 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
     #Define Functions used to formulate each basis function and initialize velocity
     radius = lambda xCent, yCent, x,y, COV: np.sqrt(\
         COV[0,0]*(x-xCent)**2+(COV[0,1]+COV[1,0])*(y-yCent)*(x-xCent)+COV[1,1]*(y-yCent)**2)
-    expRBF = lambda xCent, yCent, x, y, COV: np.exp(radius(xCent,yCent,x,y, COV)**2)
+    expRBF = lambda xCent, yCent, x, y, COV: np.exp(-radius(xCent,yCent,x,y, COV)**2)
+    #expRBF = lambda xCent, yCent, x, y, COV: np.exp(-(x**2+y**2))
     
     velocity_2D = np.zeros((num_xi, num_eta, num_dim))
     
 
-    for i_basis in range(len(basis_vort_vec)):
+    for i_basis in range(len(basis_orient_vec)):
             #load in parameters for previty
             orient = basis_orient_vec[i_basis]
             max_vort = basis_vort_vec[i_basis]
@@ -41,20 +43,56 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
             rel_extent = basis_extent_vec[i_basis]
             
             #Formulate covariance matrix
-            axis_length = np.array([[rel_extent, 0], [0, 1]])
+            axis_length = np.array([[rel_extent*base_extent, 0], [0, base_extent]])
             rotation = np.array([[np.sin(orient), -np.cos(orient)],\
                                  [np.cos(orient), np.sin(orient)]])
             cov = np.matmul(np.matmul(rotation.transpose(), axis_length), rotation)
             
-            #Formulate basis
+            #Formulate basis and convert to 3d for deriv calc
             basis_2D = expRBF(x0, y0, Xi_mesh, Eta_mesh, cov)
+            del cov
+            basis_2D_upsampled = np.empty(basis_2D.shape + (1,1))
+            basis_2D_upsampled[:,:,0,0] = basis_2D
             
             #Convert stream function to vorticity
             basis_vel_2D = np.empty(basis_2D.shape + (2,))
-            #Compute u and v
-            (dvar_dx, dvar_dy) = Find_Derivative_FD(basis_2D, cell_centroid, 2)
-            basis_vel_2D[:,:,0] = dvar_dy
-            basis_vel_2D[:,:,1] = - dvar_dx
+            #Compute first just difference matrices, then scale derivatives by centroids
+            plt.pcolormesh(Xi_mesh,
+                         Eta_mesh,
+                         basis_2D_upsampled[:,:,0,0])
+            plt.title("Upsampled basis")
+            plt.show()
+            #(dstream_dx, dstream_dy) = Find_Derivative_FD(basis_2D_upsampled, \
+            #                                            cell_centroid, 2)
+            # dstream_dxi = np.gradient(basis_2D, axis = 0)
+            # dstream_deta = np.gradient(basis_2D, axis = 1)
+            # (dcell_dx, dcell_dy) = FD_derivative_2nd_order(cell_centroid)
+            # dxi_dx = dcell_dx[:,:,0,1]
+            # deta_dy = dcell_dy[:,:,0,0]
+            # print(deta_dy[:,:,:,1]-deta_dy[:,:,:,0])
+            # plt.imshow(deta_dy[:,:,:,0])
+            # plt.show()
+            # plt.imshow(deta_dy[:,:,:,1])
+            # plt.show()
+            # plt.imshow(dxi_dx[:,:,:,0])
+            # plt.show()
+            # plt.imshow(dxi_dx[:,:,:,1])
+            # plt.show()
+            (dstream_dx, dstream_dy) = FD_derivative_2nd_order(basis_2D_upsampled)
+            print(dstream_dx.shape)
+            print(dstream_dy.shape)
+            basis_vel_2D[:,:,0] = dstream_dy[:,:,0,0]
+            basis_vel_2D[:,:,1] = -dstream_dx[:,:,0,0]
+            plt.pcolormesh(Xi_mesh,
+                         Eta_mesh,
+                         basis_vel_2D[:,:,0])
+            plt.title("u")
+            plt.show()
+            plt.pcolormesh(Xi_mesh,
+                         Eta_mesh,
+                         basis_vel_2D[:,:,1])
+            plt.title("v")
+            plt.show()
             
             #Convert to vorticity 
             vorticity = \
@@ -104,6 +142,33 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
           vmin = "auto", #-np.max(np.abs(data_2D)),
           vmax = "auto", #np.max(np.abs(data_2D)),
           colorbar_label= "v",
+          font_size = 30)
+        # plot_pcolormesh(\
+        #   Xi_mesh,
+        #   Eta_mesh,
+        #   dstream_dxi,
+        #   "artificial_dstream_dxi",
+        #   vmin = "auto", #-np.max(np.abs(data_2D)),
+        #   vmax = "auto", #np.max(np.abs(data_2D)),
+        #   colorbar_label= "dstream_dxi",
+        #   font_size = 30)
+        # plot_pcolormesh(\
+        #   Xi_mesh,
+        #   Eta_mesh,
+        #   dstream_deta,
+        #   "artificial_dstream_deta",
+        #   vmin = "auto", #-np.max(np.abs(data_2D)),
+        #   vmax = "auto", #np.max(np.abs(data_2D)),
+        #   colorbar_label= "dstream_deta",
+        #   font_size = 30)
+        plot_pcolormesh(\
+          Xi_mesh,
+          Eta_mesh,
+          basis_2D,
+          "artificial_stream",
+          vmin = "auto", #-np.max(np.abs(data_2D)),
+          vmax = "auto", #np.max(np.abs(data_2D)),
+          colorbar_label= "stream",
           font_size = 30)
 
     return(velocity_1D_compact, velocity_1D, velocity_2D)

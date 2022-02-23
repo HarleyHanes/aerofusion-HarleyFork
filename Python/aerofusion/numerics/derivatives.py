@@ -37,12 +37,36 @@ def Find_Derivative_FD(var, cell_center, order):
     (dvel_dxi, dvel_deta) = FD_derivative_6th_order(var)
   else:
     print("The requested order is wrong. Choose between 2, 4, or 6.")
+    
+  print("dx_dxi NaNs: " + str(np.sum(np.isnan(dx_dxi[:, :, 0]))))
+  print("dy_deta NaNs: " + str(np.sum(np.isnan(dy_deta[:, :, 0]))))
+  print("dx_dxi Infs: " + str(np.sum(np.isinf(dx_dxi[:, :, 0]))))
+  print("dy_deta Infs: " + str(np.sum(np.isinf(dy_deta[:, :, 0]))))
+  print("dx_dxi Means: " + str(np.mean(dx_dxi[:, :, 0])))
+  print("dy_deta Means: " + str(np.mean(dy_deta[:, :, 0])))
+  print("dx_dxi Var: " + str(np.var(dx_dxi[:, :, 0])))
+  print("dy_deta Var: " + str(np.var(dy_deta[:, :, 0])))
+  
+  print("dvel_dxi NaNs: " + str(np.sum(np.isnan(dvel_dxi))))
+  print("dvel_deta NaNs: " + str(np.sum(np.isnan(dvel_deta))))
+  print("dvel_dxi Infs: " + str(np.sum(np.isinf(dvel_dxi))))
+  print("dvel_deta Infs: " + str(np.sum(np.isinf(dvel_deta))))
+  print("dvel_dxi Means: " + str(np.mean(dvel_dxi)))
+  print("dvel_deta Means: " + str(np.mean(dvel_deta)))
+  print("dvel_dxi Var: " + str(np.var(dvel_dxi)))
+  print("dvel_deta Var: " + str(np.var(dvel_deta)))
 
   for i_dim in range(Ndim):
     dvar_dx[:, :, 0, i_dim] = \
       np.divide(dvel_dxi[:, :, 0, i_dim] ,dx_dxi[:, :, 0])
     dvar_dy[:, :, 0, i_dim] = \
       np.divide(dvel_deta[:, :, 0, i_dim], dy_deta[:, :, 0])
+    print("dvel_dx NaNs: " + str(np.sum(np.isnan(dvar_dx))))
+    print("dvel_dy NaNs: " + str(np.sum(np.isnan(dvar_dy))))
+    print("dvel_dx Infs: " + str(np.sum(np.isinf(dvar_dx))))
+    print("dvel_dy Infs: " + str(np.sum(np.isinf(dvar_dy))))
+    print("dvel_dx Means: " + str(np.mean(dvar_dx)))
+    print("dvel_dy Means: " + str(np.mean(dvar_dy)))
 
   return (dvar_dx, dvar_dy)
 

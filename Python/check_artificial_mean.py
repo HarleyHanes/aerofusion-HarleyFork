@@ -10,11 +10,27 @@ import get_artificial_mean
 import scipy.io as mio
 
 def main():
-    basis_vort_vec = np.array([1, 2])
-    basis_orient_vec = np.array([np.pi/2, np.pi/4])
-    basis_x_loc_vec = np.array([-.75, .75])
-    basis_y_loc_vec = np.array([-.75, .75])
-    basis_extent_vec = np.array([2, 3])
+    # #Basis Order              TL, BL, BR, Center, Center TR, TR center, TR
+    basis_vort_vec = np.array([2, 2])
+    basis_orient_vec = np.array([np.pi/4, 2.5*np.pi/4])
+    #basis_orient_vec = np.array([np.pi/2, 3*np.pi/4, np.pi/4, 0])
+    basis_x_loc_vec = np.array([-.75, -.75])
+    basis_y_loc_vec = np.array([.75, -.75])
+    basis_extent_vec = np.array([1.5, 2])
+    
+    # basis_vort_vec = np.array([2, 2, 2, .5])
+    # basis_orient_vec = np.array([0, np.pi/4, np.pi/2, 3*np.pi/4])
+    # basis_orient_vec = np.array([0, 3*np.pi/4, 3*np.pi/4, 3*np.pi/4])
+    # #basis_orient_vec = np.array([np.pi/2, 3*np.pi/4, np.pi/4, 0])
+    # basis_x_loc_vec = np.array([-.75, -.75, .75, .9])
+    # basis_y_loc_vec = np.array([.75, -.75, -.75, .9])
+    # basis_extent_vec = np.array([1.5, 1, 1, .5])
+    
+    # basis_vort_vec = np.array([2, 2, 2, .5, .5, .5, .5])
+    # basis_orient_vec = np.array([np.pi/2, 3*np.pi/4, np.pi/4, 0, 0, 0, 0])
+    # basis_x_loc_vec = np.array([-.75, -.75, -.75, 0, .3, .6, .9])
+    # basis_y_loc_vec = np.array([.75, -.75, .75, 0, .3, .6, .9])
+    # basis_extent_vec = np.array([1.5, 1, 1, .5, .5, .5, .5])
     
     
     data_folder = "../../lid_driven_data/"
