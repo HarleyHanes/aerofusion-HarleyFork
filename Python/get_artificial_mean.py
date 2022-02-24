@@ -12,6 +12,7 @@ from aerofusion.numerics import curl_calc as curl_calc
 from aerofusion.plot.plot_2D import plot_pcolormesh
 from aerofusion.numerics.derivatives import FD_derivative_2nd_order
 from aerofusion.numerics.derivatives import Find_Derivative_FD
+from aerofusion.numerics.derivatives_curvilinear_grid import jacobian_of_grid_2d2
 
 def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
          basis_extent_vec, Xi, Eta, Xi_mesh, Eta_mesh, cell_centroid, base_extent = 20, plot = False):
@@ -20,6 +21,8 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
     num_xi   = Xi_mesh.shape[0]
     num_eta  = Xi_mesh.shape[1]
     num_zeta = 1
+    
+    zeta = np.zeros(Xi.shape, dtype = int)
         
     
 
@@ -30,6 +33,8 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
         COV[0,0]*(x-xCent)**2+(COV[0,1]+COV[1,0])*(y-yCent)*(x-xCent)+COV[1,1]*(y-yCent)**2)
     expRBF = lambda xCent, yCent, x, y, COV: np.exp(-radius(xCent,yCent,x,y, COV)**2)
     #expRBF = lambda xCent, yCent, x, y, COV: np.exp(-(x**2+y**2))
+    #expRBF_dx = lambda x,y: -2*x*np.exp(-(x**2+y**2))
+    #expRBF_dy = lambda x,y: -2*y*np.exp(-(x**2+y**2))
     
     velocity_2D = np.zeros((num_xi, num_eta, num_dim))
     
@@ -57,11 +62,11 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
             #Convert stream function to vorticity
             basis_vel_2D = np.empty(basis_2D.shape + (2,))
             #Compute first just difference matrices, then scale derivatives by centroids
-            plt.pcolormesh(Xi_mesh,
-                         Eta_mesh,
-                         basis_2D_upsampled[:,:,0,0])
-            plt.title("Upsampled basis")
-            plt.show()
+            # plt.pcolormesh(Xi_mesh,
+            #              Eta_mesh,
+            #              basis_2D_upsampled[:,:,0,0])
+            # plt.title("Upsampled basis")
+            # plt.show()
             #(dstream_dx, dstream_dy) = Find_Derivative_FD(basis_2D_upsampled, \
             #                                            cell_centroid, 2)
             # dstream_dxi = np.gradient(basis_2D, axis = 0)
@@ -78,21 +83,37 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
             # plt.show()
             # plt.imshow(dxi_dx[:,:,:,1])
             # plt.show()
-            (dstream_dx, dstream_dy) = FD_derivative_2nd_order(basis_2D_upsampled)
-            print(dstream_dx.shape)
-            print(dstream_dy.shape)
-            basis_vel_2D[:,:,0] = dstream_dy[:,:,0,0]
-            basis_vel_2D[:,:,1] = -dstream_dx[:,:,0,0]
-            plt.pcolormesh(Xi_mesh,
-                         Eta_mesh,
-                         basis_vel_2D[:,:,0])
-            plt.title("u")
-            plt.show()
-            plt.pcolormesh(Xi_mesh,
-                         Eta_mesh,
-                         basis_vel_2D[:,:,1])
-            plt.title("v")
-            plt.show()
+            (dstream_dxi, dstream_deta) = FD_derivative_2nd_order(basis_2D_upsampled)
+            # jac = jacobian_of_grid_2d2(Xi, Eta, zeta, cell_centroid, 2)
+            
+            # dx_dxi = arr_conv.array_1D_to_2D(Xi, Eta, 258, 258, jac[0,1,:])
+            # dy_deta = arr_conv.array_1D_to_2D(Xi, Eta, 258, 258, jac[1,0,:])
+            
+            # dxi_dx = np.linalg.inv(dx_dxi)
+            # deta_dy = np.linalg.inv(dy_deta)
+            
+            basis_vel_2D[:,:,0] = dstream_deta[:,:,0,0]#*deta_dy[:,:,0]
+            basis_vel_2D[:,:,1] = -dstream_dxi[:,:,0,0]#*dxi_dx[:,:,1]
+            # plt.pcolormesh(Xi_mesh,
+            #              Eta_mesh,
+            #              basis_vel_2D[:,:,0])
+            # plt.title("u")
+            # plt.show()
+            # plt.pcolormesh(Xi_mesh,
+            #              Eta_mesh,
+            #              expRBF_dy(Xi_mesh, Eta_mesh)-basis_vel_2D[:,:,0])
+            # plt.title("u error")
+            # plt.show()
+            # plt.pcolormesh(Xi_mesh,
+            #              Eta_mesh,
+            #              basis_vel_2D[:,:,0])
+            # plt.title("v")
+            # plt.show()
+            # plt.pcolormesh(Xi_mesh,
+            #              Eta_mesh,
+            #              -expRBF_dx(Xi_mesh, Eta_mesh)-basis_vel_2D[:,:,0])
+            # plt.title("v error")
+            # plt.show()
             
             #Convert to vorticity 
             vorticity = \
@@ -114,16 +135,16 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
     for i in range(2):
         velocity_1D[:,i] = arr_conv.array_2D_to_1D(\
                        Xi, Eta, num_cell, velocity_2D[:,:,i])
-    velocity_1D_compact = np.reshape(velocity_1D, (num_cell*num_dim), order = 'F')
+    velocity_1D_compact = arr_conv.array_1D_to_compact(velocity_1D)
     
     #Convert back to mesh for sanity check
-    check_velocity_1D = np.reshape(velocity_1D_compact, (num_cell, num_dim), order = 'F')
-    check_velocity_2D = np.empty(velocity_2D.shape)
-    for i in range(2):
-        check_velocity_2D[:,:,i] = arr_conv.array_1D_to_2D(\
-                                Xi, Eta, num_xi, num_eta, check_velocity_1D[:,i])
-    if np.max(check_velocity_2D-velocity_2D)>1e-10:
-        raise(Exception("Array Conversion flawed"))
+    # check_velocity_1D = np.reshape(velocity_1D_compact, (num_cell, num_dim), order = 'F')
+    # check_velocity_2D = np.empty(velocity_2D.shape)
+    # for i in range(2):
+    #     check_velocity_2D[:,:,i] = arr_conv.array_1D_to_2D(\
+    #                             Xi, Eta, num_xi, num_eta, check_velocity_1D[:,i])
+    # if np.max(check_velocity_2D-velocity_2D)>1e-10:
+    #     raise(Exception("Array Conversion flawed"))
     if plot:
         plot_pcolormesh(\
           Xi_mesh,
@@ -142,6 +163,15 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
           vmin = "auto", #-np.max(np.abs(data_2D)),
           vmax = "auto", #np.max(np.abs(data_2D)),
           colorbar_label= "v",
+          font_size = 30)
+        plot_pcolormesh(\
+          Xi_mesh,
+          Eta_mesh,
+          vorticity*prop_vort_change,
+          "artificial_vort",
+          vmin = "auto", #-np.max(np.abs(data_2D)),
+          vmax = "auto", #np.max(np.abs(data_2D)),
+          colorbar_label= "vorticity",
           font_size = 30)
         # plot_pcolormesh(\
         #   Xi_mesh,
@@ -171,7 +201,7 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
           colorbar_label= "stream",
           font_size = 30)
 
-    return(velocity_1D_compact, velocity_1D, velocity_2D)
+    return velocity_1D_compact
 
 if __name__ == '__main__':
     main()

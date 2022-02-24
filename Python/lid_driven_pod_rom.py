@@ -5,15 +5,17 @@ Created on Tue Feb 15 10:10:36 2022
 @author: USER
 """
 import numpy as np
-import get_artificial_mean
-import get_pod_lid_input_variant as get_pod
+from get_artificial_mean import main as get_artificial_mean
+from get_pod_lid_input_variant import main as get_pod
 from aerofusion.numerics import derivatives_curvilinear_grid as curvder
 from aerofusion.rom import incompressible_navier_stokes_rom as incrom
 from aerofusion.data import array_conversion as arr_conv
 from aerofusion.numerics import curl_calc as curl_calc
 
-def main(poi_normalized, poi_selector, qoi_selector, un_normalizer, num_modes,\
+def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
          discretization, velocity_unreduced_1D_compact, integration_times):
+    
+    
     #=============================Load Discretization==========================
     Xi = discretization["Xi"]
     Eta = discretization["Eta"]
@@ -23,10 +25,11 @@ def main(poi_normalized, poi_selector, qoi_selector, un_normalizer, num_modes,\
     cell_centroid = discretization["cell_centroid"]
     num_cell = discretization["num_cell"]
     weights_ND = discretization["weights_ND"]
-    num_xi = 256
-    num_eta = 256
+    num_xi = 258
+    num_eta = 258
     num_zeta = 1
     n_dim = 2
+    n_cell = num_xi * num_eta * num_zeta
     
     #=============================Inititalize Matrices=========================
     if poi_selector.ndim !=1:
@@ -36,9 +39,10 @@ def main(poi_normalized, poi_selector, qoi_selector, un_normalizer, num_modes,\
         n_samp =1
     elif poi_normalized.ndim == 2:
         n_poi = poi_normalized.shape[1]
-        n_samp = poi_normalized.shape=[0]
+        n_samp = poi_normalized.shape[0]
     if n_poi!= poi_selector.size:
         raise Exception("poi and poi_selector different lengths")
+    n_qoi = qoi_selector.size
     #Intialize matrices for local POIs to improve processing
     basis_vort_mat = np.empty((n_samp,0))
     basis_orient_mat = np.empty((n_samp,0))
@@ -46,35 +50,38 @@ def main(poi_normalized, poi_selector, qoi_selector, un_normalizer, num_modes,\
     basis_y_loc_mat = np.empty((n_samp,0))
     basis_extent_mat = np.empty((n_samp,0))
     #=============================Unapply normalization========================
-    poi = un_normalizer(poi_normalized)
+    poi = un_normalize_poi(poi_normalized, poi_bounds)
+    print("poi: " + str(poi))
     del poi_normalized
     #================================Load POI Values===========================
     #Load pois and unnormalize
+    print("n_poi: " + str(n_poi))
+    print("n_samp: " + str(n_samp))
     if n_samp ==1:
         for i_poi in range(n_poi):
-            if poi_selector[n_poi].lower() == 're':
+            if poi_selector[i_poi].lower() == 're':
                 reynolds_number_vec = poi[[i_poi]]
-            elif poi_selector[n_poi].lower() == 'boundary exponent':
+            elif poi_selector[i_poi].lower() == 'boundary exponent mult':
                 boundary_exp_vec = poi[[i_poi]]
-            elif poi_selector[n_poi].lower() == 'penalty strength':
+            elif poi_selector[i_poi].lower() == 'penalty strength':
                 pen_strength_vec = poi[[i_poi]]
-            elif poi_selector[n_poi].lower()[0:10] == 'basis vort':
+            elif poi_selector[i_poi].lower()[0:10] == 'basis vort':
                 basis_vort_mat=np.append(basis_vort_mat, \
                                          poi[i_poi].reshape(1,1),\
                                          axis=1)
-            elif poi_selector[n_poi].lower()[0:12] == 'basis orient':
+            elif poi_selector[i_poi].lower()[0:12] == 'basis orient':
                 basis_orient_mat=np.append(basis_orient_mat, \
                                            poi[i_poi].reshape(1,1), \
                                            axis=1)
-            elif poi_selector[n_poi].lower()[0:16] == 'basis x-location':
+            elif poi_selector[i_poi].lower()[0:16] == 'basis x-location':
                 basis_x_loc_mat=np.append(basis_x_loc_mat,\
                                              poi[i_poi].reshape(1,1), \
                                              axis=1)
-            elif poi_selector[n_poi].lower()[0:16] == 'basis y-location':
+            elif poi_selector[i_poi].lower()[0:16] == 'basis y-location':
                 basis_y_loc_mat=np.append(basis_y_loc_mat,\
                                              poi[i_poi].reshape(1,1), \
                                              axis=1)
-            elif poi_selector[n_poi].lower()[0:12] == 'basis extent':
+            elif poi_selector[i_poi].lower()[0:12] == 'basis extent':
                 basis_extent_mat=np.append(basis_extent_mat, \
                                            poi[i_poi].reshape(1,1), \
                                            axis=1)
@@ -82,29 +89,29 @@ def main(poi_normalized, poi_selector, qoi_selector, un_normalizer, num_modes,\
                 raise Exception("Unrecognized poi name: " + str(poi_selector[i_poi]))
     else:
         for i_poi in range(n_poi):
-            if poi_selector[n_poi].lower() == 're':
+            if poi_selector[i_poi].lower() == 're':
                 reynolds_number_vec = poi[:,i_poi]
-            elif poi_selector[n_poi].lower() == 'boundary exponent':
+            elif poi_selector[i_poi].lower() == 'boundary exponent mult':
                 boundary_exp_vec = poi[:, i_poi]
-            elif poi_selector[n_poi].lower() == 'penalty strength':
+            elif poi_selector[i_poi].lower() == 'penalty strength':
                 pen_strength_vec = poi[:,i_poi]
-            elif poi_selector[n_poi].lower()[0:10] == 'basis vort':
+            elif poi_selector[i_poi].lower()[0:10] == 'basis vort':
                 basis_vort_mat=np.append(basis_vort_mat, \
                                          poi[:,i_poi].reshape(n_samp,1),\
                                          axis=1)
-            elif poi_selector[n_poi].lower()[0:12] == 'basis orient':
+            elif poi_selector[i_poi].lower()[0:12] == 'basis orient':
                 basis_orient_mat=np.append(basis_orient_mat, \
                                            poi[:,i_poi].reshape(n_samp,1), \
                                            axis=1)
-            elif poi_selector[n_poi].lower()[0:16] == 'basis x-location':
+            elif poi_selector[i_poi].lower()[0:16] == 'basis x-location':
                 basis_x_loc_mat=np.append(basis_x_loc_mat,\
                                              poi[:,i_poi].reshape(n_samp,1), \
                                              axis=1)
-            elif poi_selector[n_poi].lower()[0:16] == 'basis y-location':
+            elif poi_selector[i_poi].lower()[0:16] == 'basis y-location':
                 basis_y_loc_mat=np.append(basis_y_loc_mat,\
                                              poi[:,i_poi].reshape(n_samp,1), \
                                              axis=1)
-            elif poi_selector[n_poi].lower()[0:12] == 'basis extent':
+            elif poi_selector[i_poi].lower()[0:12] == 'basis extent':
                 basis_extent_mat=np.append(basis_extent_mat, \
                                            poi[:,i_poi].reshape(n_samp,1), \
                                            axis=1)
@@ -113,7 +120,7 @@ def main(poi_normalized, poi_selector, qoi_selector, un_normalizer, num_modes,\
     for i_samp in range(n_samp):
         #Unpack POIs
         reynolds_number = reynolds_number_vec[i_samp]
-        boundary_exp = boundary_exp_vec[i_samp]
+        boundary_exp = 10**(boundary_exp_vec[i_samp])
         penalty_strength = pen_strength_vec[i_samp]
         basis_vort_vec = basis_vort_mat[i_samp]
         basis_orient_vec = basis_orient_mat[i_samp]
@@ -162,7 +169,7 @@ def main(poi_normalized, poi_selector, qoi_selector, un_normalizer, num_modes,\
                                                      weights_ND, \
                                                      num_modes)
         #Convert 1D mean reduction to 3D for ROM matrix calculations
-        vel_0_1D = arr_conv.compact_to_1D(vel_0_1D_compact)
+        vel_0_1D = arr_conv.array_compact_to_1D(vel_0_1D_compact, n_dim, n_cell)
         vel_0_3D = np.empty(((num_xi, num_eta, num_zeta, n_dim)))
         for i_dim in range(n_dim):
             vel_0_3D[:,:,0,i_dim] = arr_conv.array_1D_to_2D(\
@@ -170,6 +177,7 @@ def main(poi_normalized, poi_selector, qoi_selector, un_normalizer, num_modes,\
         vel_0_2D = vel_0_3D[:,:,0,:]
         #Convert from compact to 3D variations
         #Caclulate ROM matrices
+        print("Calculating Jacobian")
         jacobian = curvder.jacobian_of_grid_2d2(\
             Xi,
             Eta,
@@ -216,6 +224,7 @@ def main(poi_normalized, poi_selector, qoi_selector, un_normalizer, num_modes,\
         char_L = 1
         
         #Integrate ROM
+        print("Solving System")
         aT = incrom.rom_calc_rk45_boundary(\
                 reynolds_number,
                 char_L,
@@ -233,7 +242,7 @@ def main(poi_normalized, poi_selector, qoi_selector, un_normalizer, num_modes,\
         mean_reduced_velocity = np.matmul(phi, modal_coeff).flatten()
         velocity_rom_1D_compact = mean_reduced_velocity + vel_0_1D_compact
         #Transfer to 2D
-        velocity_rom_1D = arr_conv.compact_to_1D(velocity_rom_1D_compact)
+        velocity_rom_1D = arr_conv.array_compact_to_1D(velocity_rom_1D_compact, n_dim, n_cell)
         velocity_rom_2D = np.zeros((num_xi, num_eta, n_dim))
         for i_dim in range(2):
               velocity_rom_2D[:,:,i_dim] = arr_conv.array_1D_to_2D(\
@@ -242,8 +251,9 @@ def main(poi_normalized, poi_selector, qoi_selector, un_normalizer, num_modes,\
                                          velocity_rom_2D[:, :, 0], velocity_rom_2D[:, :,1])
         
         #Get QOI values
+        print("Getting QOIs")
         qois_samp = np.empty((0,))
-        for i_qoi in range(qoi_selector):
+        for i_qoi in range(n_qoi):
             if qoi_selector[i_qoi].lower() == "energy":
                 energy = np.sum(np.abs(modal_coeff))
                 qois_samp = np.append(qois_samp, energy)
@@ -253,11 +263,16 @@ def main(poi_normalized, poi_selector, qoi_selector, un_normalizer, num_modes,\
             elif qoi_selector[i_qoi].lower () == "min vorticity":
                 min_vort = np.min(vorticity_2D)
                 qois_samp = np.append(qois_samp, min_vort)
-        if i_samp == 1:
-            qois = np.empty((i_samp, qois_samp.size))
+            else :
+                raise Exception("Unknown qoi: " + str(qoi_selector[i_qoi]))
+        if i_samp == 0:
+            qois = np.empty((n_samp, qois_samp.size))
+        print(qois_samp)
         qois[i_samp] = qois_samp
+        del qois_samp
+        print(qois)
     
-    return qois
+    return qois.squeeze()
     
 def normalize_pois(poi_base, bounds):
     poi_normalized = np.empty(poi_base.shape)
@@ -273,6 +288,7 @@ def normalize_pois(poi_base, bounds):
             raise Exception("Invalid bounds shape of " + str(bounds.shape))
         for i_poi in range(n_poi):
             poi_normalized[:,i_poi] = (poi_base[:, i_poi]-bounds[i_poi][0])/(bounds[i_poi][1]-bounds[i_poi][0])
+    return poi_normalized
             
 def un_normalize_poi(poi_normalized, bounds):
     poi_base = np.empty(poi_normalized.shape)
@@ -288,4 +304,4 @@ def un_normalize_poi(poi_normalized, bounds):
             raise Exception("Invalid bounds shape of " + str(bounds.shape))
         for i_poi in range(n_poi):
             poi_base[:,i_poi] = (poi_normalized[:,i_poi])*(bounds[i_poi][1]-bounds[i_poi][0])+bounds[i_poi][0]
-            
+    return poi_base

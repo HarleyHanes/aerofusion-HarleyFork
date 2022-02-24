@@ -37,14 +37,14 @@ def jacobian_of_grid_2d2(xi, eta, zeta, cell_center, accuracy):
   dy_deta[:, :, :] = dcell_deta[:, :, :, 1]
   dx_deta[:, :, :] = dcell_deta[:, :, :, 0]
   
-  print("dx_dxi NaNs: " + str(np.sum(np.isnan(dx_dxi[:, :, 0]))))
-  print("dy_deta NaNs: " + str(np.sum(np.isnan(dy_deta[:, :, 0]))))
-  print("dx_dxi Infs: " + str(np.sum(np.isinf(dx_dxi[:, :, 0]))))
-  print("dy_deta Infs: " + str(np.sum(np.isinf(dy_deta[:, :, 0]))))
-  print("dx_dxi Means: " + str(np.mean(dx_dxi[:, :, 0])))
-  print("dy_deta Means: " + str(np.mean(dy_deta[:, :, 0])))
-  print("dx_dxi Var: " + str(np.var(dx_dxi[:, :, 0])))
-  print("dy_deta Var: " + str(np.var(dy_deta[:, :, 0])))
+  # print("dx_dxi NaNs: " + str(np.sum(np.isnan(dx_dxi[:, :, 0]))))
+  # print("dy_deta NaNs: " + str(np.sum(np.isnan(dy_deta[:, :, 0]))))
+  # print("dx_dxi Infs: " + str(np.sum(np.isinf(dx_dxi[:, :, 0]))))
+  # print("dy_deta Infs: " + str(np.sum(np.isinf(dy_deta[:, :, 0]))))
+  # print("dx_dxi Means: " + str(np.mean(dx_dxi[:, :, 0])))
+  # print("dy_deta Means: " + str(np.mean(dy_deta[:, :, 0])))
+  # print("dx_dxi Var: " + str(np.var(dx_dxi[:, :, 0])))
+  # print("dy_deta Var: " + str(np.var(dy_deta[:, :, 0])))
 
   dx_dxi_1D = array_3D_to_1D(xi, eta, zeta, num_cell, dx_dxi)
   dy_dxi_1D = array_3D_to_1D(xi, eta, zeta, num_cell, dy_dxi)
@@ -62,9 +62,9 @@ def jacobian_of_grid_2d2(xi, eta, zeta, cell_center, accuracy):
     jacobian[1, 0, i_cell] =  -inv_det * dy_dxi_1D[i_cell]
     jacobian[1, 1, i_cell] =   inv_det * dx_dxi_1D[i_cell]
     
-  print("Jacobian Means: " + str(np.mean(jacobian)))
-  print("Jacobian Var: " + str(np.var(jacobian)))
-  print("Jacobian Var: " + str(np.var(jacobian)))
+  # print("Jacobian Means: " + str(np.mean(jacobian)))
+  # print("Jacobian Var: " + str(np.var(jacobian)))
+  # print("Jacobian Var: " + str(np.var(jacobian)))
 
 
   return(jacobian)
