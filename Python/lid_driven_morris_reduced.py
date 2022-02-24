@@ -63,8 +63,8 @@ def main(argv=None):
                                       [0,1],\
                                       [0,1],\
                                       [0,1],\
-                                      #[0,1],\
-                                      #[0,1],\
+                                      [0,1],\
+                                      [0,1],\
                                       [0,1]]).transpose()
     qoi_names = np.array(["energy", "max vorticity", "min vorticity"])
     #======================Load velocity and discretization data=====================
