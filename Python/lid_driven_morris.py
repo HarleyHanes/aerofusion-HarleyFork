@@ -109,10 +109,6 @@ def main(argv=None):
 
    
     Zeta=np.zeros((Xi.shape[0],),dtype='int')    
-    Xi_mesh=Xi.reshape((num_eta, num_xi))
-    Eta_mesh=Eta.reshape((num_eta, num_xi))
-    Xi_mesh = (Xi_mesh- (num_xi-1)/2)/(num_xi/2)
-    Eta_mesh = (Eta_mesh- (num_eta-1)/2)/(num_eta/2)
 
     #Convert to meshes for Xi and Eta
     
@@ -120,8 +116,6 @@ def main(argv=None):
     discretization = {"Xi":  Xi, 
                       "Eta": Eta, 
                       "Zeta": Zeta, 
-                      "Xi_mesh": cell_centroid[:,:,0,0],
-                      "Eta_mesh": cell_centroid[:,:,0,1],
                       "cell_centroid": cell_centroid,
                       "num_cell": num_cell,
                       "weights_ND": weights_ND

@@ -15,11 +15,11 @@ from aerofusion.numerics.derivatives import Find_Derivative_FD
 from aerofusion.numerics.derivatives_curvilinear_grid import jacobian_of_grid_2d2
 
 def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
-         basis_extent_vec, Xi, Eta, Xi_mesh, Eta_mesh, cell_centroid, base_extent = 20, plot = False):
+         basis_extent_vec, Xi, Eta, cell_centroid, base_extent = 20, plot = False):
     
     num_dim  = 2
-    num_xi   = Xi_mesh.shape[0]
-    num_eta  = Xi_mesh.shape[1]
+    num_xi   = cell_centroid.shape[0]
+    num_eta  = cell_centroid.shape[1]
     num_zeta = 1
     
     zeta = np.zeros(Xi.shape, dtype = int)
@@ -32,6 +32,10 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
     radius = lambda xCent, yCent, x,y, COV: np.sqrt(\
         COV[0,0]*(x-xCent)**2+(COV[0,1]+COV[1,0])*(y-yCent)*(x-xCent)+COV[1,1]*(y-yCent)**2)
     expRBF = lambda xCent, yCent, x, y, COV: np.exp(-radius(xCent,yCent,x,y, COV)**2)
+    fcn_u = lambda xCent, yCent, x,y, COV: -expRBF(xCent, yCent, x, y,COV) *\
+                        ((COV[1,0]+COV[0,1])*(x-xCent)+2*COV[1,1]*(y-yCent))
+    fcn_v = lambda xCent, yCent, x,y, COV: expRBF(xCent, yCent, x, y, COV) * \
+                        ((COV[1,0]+COV[0,1])*(y-yCent)+2*COV[0,0]*(x-xCent))
     #expRBF = lambda xCent, yCent, x, y, COV: np.exp(-(x**2+y**2))
     #expRBF_dx = lambda x,y: -2*x*np.exp(-(x**2+y**2))
     #expRBF_dy = lambda x,y: -2*y*np.exp(-(x**2+y**2))
@@ -54,13 +58,12 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
             cov = np.matmul(np.matmul(rotation.transpose(), axis_length), rotation)
             
             #Formulate basis and convert to 3d for deriv calc
-            basis_2D = expRBF(x0, y0, Xi_mesh, Eta_mesh, cov)
-            del cov
+            basis_2D = expRBF(x0, y0, cell_centroid[:,:,0,0], cell_centroid[:,:,0,1], cov)
             basis_2D_upsampled = np.empty(basis_2D.shape + (1,1))
             basis_2D_upsampled[:,:,0,0] = basis_2D
             
             #Convert stream function to vorticity
-            basis_vel_2D = np.empty(basis_2D.shape + (2,))
+            basis_vel_2D = np.empty(cell_centroid[:,:,0,0].shape + (2,))
             #Compute first just difference matrices, then scale derivatives by centroids
             # plt.pcolormesh(Xi_mesh,
             #              Eta_mesh,
@@ -83,7 +86,7 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
             # plt.show()
             # plt.imshow(dxi_dx[:,:,:,1])
             # plt.show()
-            (dstream_dxi, dstream_deta) = FD_derivative_2nd_order(basis_2D_upsampled)
+            #(dstream_dxi, dstream_deta) = FD_derivative_2nd_order(basis_2D_upsampled)
             # jac = jacobian_of_grid_2d2(Xi, Eta, zeta, cell_centroid, 2)
             
             # dx_dxi = arr_conv.array_1D_to_2D(Xi, Eta, 258, 258, jac[0,1,:])
@@ -92,8 +95,8 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
             # dxi_dx = np.linalg.inv(dx_dxi)
             # deta_dy = np.linalg.inv(dy_deta)
             
-            basis_vel_2D[:,:,0] = dstream_deta[:,:,0,0]#*deta_dy[:,:,0]
-            basis_vel_2D[:,:,1] = -dstream_dxi[:,:,0,0]#*dxi_dx[:,:,1]
+            basis_vel_2D[:,:,0] = fcn_u(x0, y0, cell_centroid[:,:,0,0], cell_centroid[:,:,0,1], cov)
+            basis_vel_2D[:,:,1] = fcn_v(x0, y0, cell_centroid[:,:,0,0], cell_centroid[:,:,0,1], cov)
             # plt.pcolormesh(Xi_mesh,
             #              Eta_mesh,
             #              basis_vel_2D[:,:,0])
@@ -119,10 +122,12 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
             vorticity = \
               curl_calc.curl_2d(-cell_centroid[:,0,0,1], -cell_centroid[0,:,0,0],
                 basis_vel_2D[:,:,0], basis_vel_2D[:,:,1])
+            print("max vort: " + str(np.max(np.abs(vorticity))))
             #Determine how much the voriticity would need to be scaled by so we
             # can rescale the velocity by the same amount since their magnitudes
             # follow scalar multiple relationship
             prop_vort_change = np.max(np.abs(vorticity))/max_vort
+            print("vort change: " + str(prop_vort_change))
             basis_vel_2D = basis_vel_2D/ prop_vort_change
             
             velocity_2D += basis_vel_2D
@@ -147,8 +152,8 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
     #     raise(Exception("Array Conversion flawed"))
     if plot:
         plot_pcolormesh(\
-          Xi_mesh,
-          Eta_mesh,
+          cell_centroid[:,:,0,0],
+          cell_centroid[:,:,0,1],
           velocity_2D[:,:,0],
           "artificial_u0_vel",
           vmin = "auto", #-np.max(np.abs(data_2D)),
@@ -156,8 +161,8 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
           colorbar_label= "u",
           font_size = 30)
         plot_pcolormesh(\
-          Xi_mesh,
-          Eta_mesh,
+          cell_centroid[:,:,0,0],
+          cell_centroid[:,:,0,1],
           velocity_2D[:,:,1],
           "artificial_v0_vel",
           vmin = "auto", #-np.max(np.abs(data_2D)),
@@ -165,9 +170,9 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
           colorbar_label= "v",
           font_size = 30)
         plot_pcolormesh(\
-          Xi_mesh,
-          Eta_mesh,
-          vorticity*prop_vort_change,
+          cell_centroid[:,:,0,0],
+          cell_centroid[:,:,0,1],
+          vorticity/ prop_vort_change,
           "artificial_vort",
           vmin = "auto", #-np.max(np.abs(data_2D)),
           vmax = "auto", #np.max(np.abs(data_2D)),
@@ -192,8 +197,8 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
         #   colorbar_label= "dstream_deta",
         #   font_size = 30)
         plot_pcolormesh(\
-          Xi_mesh,
-          Eta_mesh,
+          cell_centroid[:,:,0,0],
+          cell_centroid[:,:,0,1],
           basis_2D,
           "artificial_stream",
           vmin = "auto", #-np.max(np.abs(data_2D)),

@@ -21,8 +21,6 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
     Xi = discretization["Xi"]
     Eta = discretization["Eta"]
     zeta = discretization["Zeta"]
-    Xi_mesh = discretization["Xi_mesh"]
-    Eta_mesh = discretization["Eta_mesh"]
     cell_centroid = discretization["cell_centroid"]
     num_cell = discretization["num_cell"]
     weights_ND = discretization["weights_ND"]
@@ -132,7 +130,7 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
         basis_y_loc_vec = basis_y_loc_mat[i_samp]
         basis_extent_vec = basis_extent_mat[i_samp]
         #Formulate boundary vector
-        x_boundary = Xi_mesh[0,:]
+        x_boundary = cell_centroid[0,:,0,0]
         boundary_vec = (np.abs(1-x_boundary)*np.abs(1+x_boundary))**boundary_exp
         
         #--------------------Construct snapshot and pod------------------------
@@ -155,7 +153,7 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
                 vel_0_1D_compact = get_artificial_mean(\
                                   basis_vort_vec, basis_orient_vec, basis_x_loc_vec,\
                                   basis_y_loc_vec, basis_extent_vec, Xi, Eta, \
-                                  Xi_mesh, Eta_mesh, cell_centroid)
+                                  cell_centroid)
                 (phi, modal_coeff, pod_lambda) = get_pod(velocity_unreduced_1D_compact, \
                                                          "artificial", \
                                                          vel_0_1D_compact,\
@@ -167,7 +165,7 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
             vel_0_1D_compact = get_artificial_mean(\
                               basis_vort_vec, basis_orient_vec, basis_x_loc_vec,\
                               basis_y_loc_vec, basis_extent_vec, Xi, Eta, \
-                              Xi_mesh, Eta_mesh, cell_centroid)
+                              cell_centroid)
             (phi, modal_coeff, pod_lambda) = get_pod(velocity_unreduced_1D_compact, \
                                                      "artificial", \
                                                      vel_0_1D_compact,\
