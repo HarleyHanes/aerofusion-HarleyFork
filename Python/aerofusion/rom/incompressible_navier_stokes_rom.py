@@ -46,7 +46,7 @@ def pod_rom_matrices_2d(xi_index, eta_index, zeta_index, cell_center,
   v0_ND[2 * num_cell + 1:3 * num_cell] = 0
 
   ##-------derivative on curvilinear grid-----------
-  print('Calculating velocity derivatives')
+  #print('Calculating velocity derivatives')
   dvel_dx_1D = np.zeros([num_cell, num_dim])
   dvel_dy_1D = np.zeros([num_cell, num_dim])
   ddvel_dx2_1D = np.zeros([num_cell, num_dim])
@@ -101,7 +101,7 @@ def pod_rom_matrices_2d(xi_index, eta_index, zeta_index, cell_center,
   ddphidx2_1D = np.zeros([num_cell, num_dim, num_snapshots])
   ddphidy2_1D = np.zeros([num_cell, num_dim, num_snapshots])
 
-  print('Calculating derivative of phi')
+  #print('Calculating derivative of phi')
   for i_snap in range(num_snapshots):
     (dphidx_1D[:,:,i_snap], dphidy_1D[:,:,i_snap]) = \
        curvder.derivative(\
@@ -166,7 +166,7 @@ def pod_rom_matrices_2d(xi_index, eta_index, zeta_index, cell_center,
                    np.multiply(u0_ND, dvel_dx_1D ) + \
                    np.multiply(v0_ND, dvel_dy_1D) )
 
-  print('Shape of C0', C0.shape)
+  #print('Shape of C0', C0.shape)
   # print('Numerical calc of L0')
   L0 = - np.matmul(\
     phi_transpose_by_weight,
@@ -175,16 +175,16 @@ def pod_rom_matrices_2d(xi_index, eta_index, zeta_index, cell_center,
     (np.multiply(phi_dim1_ND.transpose(), dvel_dx_1D)).transpose() + \
     (np.multiply(phi_dim2_ND.transpose(), dvel_dy_1D)).transpose())
 
-  print('Shape of L0', L0.shape)
+  #print('Shape of L0', L0.shape)
   # creating LRe[num_snapshots,num_snapshots]
   LRe = np.matmul(phi_transpose_by_weight,
                     ddphi_dx2_1D + ddphi_dy2_1D)
-  print('Shape of LRe', LRe.shape)
+  #print('Shape of LRe', LRe.shape)
 
   # creating CRe
   CRe = np.matmul(phi_transpose_by_weight, ddvel_dx2_1D) + \
         np.matmul(phi_transpose_by_weight, ddvel_dy2_1D)
-  print('Shape of CRe', CRe.shape)
+  #print('Shape of CRe', CRe.shape)
 
   # creating Q[num_snapshots,num_snapshots,num_snapshots]
   Q = np.zeros([num_snapshots, num_snapshots, num_snapshots])
@@ -195,7 +195,7 @@ def pod_rom_matrices_2d(xi_index, eta_index, zeta_index, cell_center,
                     dphi_dx_1D.transpose())).transpose() + \
                      (np.multiply(phi_dim2_ND[:, i_mode], \
                        dphi_dy_1D.transpose())).transpose())
-  print('Shape of Q', Q.shape)
+  #print('Shape of Q', Q.shape)
   
 
           
@@ -272,11 +272,11 @@ def pod_rom_boundary_matrices_2d(xi_index, eta_index, zeta_index, cell_center,
     
   #Caclulate B
   B  = np.matmul(phi_transpose_by_weight, phi_unweighted_boundary)
-  print('Shape of B', B.shape)
+  #print('Shape of B', B.shape)
     
   #Caclulate B0
   B0 = np.matmul(phi_transpose_by_weight, vel_inf_boundary - vel_0_boundary)
-  print('Shape of B0', B0.shape)
+  #print('Shape of B0', B0.shape)
     
   return(B, B0)
     
@@ -316,7 +316,7 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
 
 
   ##-------derivative on curvilinear grid-----------
-  print('Calculating derivative of velocity')
+  #print('Calculating derivative of velocity')
   dvel_dx_1D = np.zeros([num_cell, num_dim])
   dvel_dy_1D = np.zeros([num_cell, num_dim])
   dvel_dz_1D = np.zeros([num_cell, num_dim])
@@ -365,7 +365,7 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
     (dvel_dz_3D, xi_index, eta_index, zeta_index, num_cell, jacobian,\
       accuracy_x, accuracy_y, accuracy_z)
 
-  print('Reconstructing derivative of velocity')
+  #print('Reconstructing derivative of velocity')
   dvel_dx_1D = np.reshape(dvel_dx_1D.transpose(), (num_cell * num_dim))
   dvel_dy_1D = np.reshape(dvel_dy_1D.transpose(), (num_cell * num_dim))
   dvel_dz_1D = np.reshape(dvel_dz_1D.transpose(), (num_cell * num_dim))
@@ -373,7 +373,7 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
   ddvel_dy2_1D = np.reshape(ddvel_dy2_1D.transpose(), (num_cell * num_dim))
   ddvel_dz2_1D = np.reshape(ddvel_dz2_1D.transpose(), (num_cell * num_dim))
 
-  print('Preparing phi')
+  #print('Preparing phi')
   phi_x_ND = np.zeros([num_cell, num_snapshots])
   phi_y_ND = np.zeros([num_cell, num_snapshots])
   phi_z_ND = np.zeros([num_cell, num_snapshots])
@@ -482,16 +482,16 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
   print('DEBUG in matrices calc: reshaping dphi', t_end - t_begin)
   phi_transpose_by_weight = np.multiply(phi.transpose(), weights)
 
-  print('Calculating C0')
+  #print('Calculating C0')
   t_begin = time.time()
   C0 = - np.matmul(phi_transpose_by_weight,
                    np.multiply(u0_ND, dvel_dx_1D) + \
                    np.multiply(v0_ND, dvel_dy_1D) + \
                    np.multiply(w0_ND, dvel_dz_1D))
   t_end = time.time()
-  print('DEBUG C0 calc', t_end -t_begin)
-  print('Shape of C0', C0.shape)
-  print('Calculating L0')
+  #print('DEBUG C0 calc', t_end -t_begin)
+  #print('Shape of C0', C0.shape)
+  #print('Calculating L0')
   t_begin = time.time()
   L0 = - np.matmul(\
     phi_transpose_by_weight,
@@ -502,26 +502,26 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
     (np.multiply(phi_y_ND.transpose(), dvel_dy_1D)).transpose() + \
     (np.multiply(phi_z_ND.transpose(), dvel_dz_1D)).transpose())
   t_end = time.time()
-  print('DEBUG L0 calc', t_end -t_begin)
-  print('Shape of L0', L0.shape)
-  print('Calculating LRe')
+  #print('DEBUG L0 calc', t_end -t_begin)
+  #print('Shape of L0', L0.shape)
+  #print('Calculating LRe')
   # creating LRe[num_snapshots,num_snapshots]
   t_begin = time.time()
   LRe = np.matmul(phi_transpose_by_weight,
                     ddphi_dx2_1D + ddphi_dy2_1D + ddphi_dz2_1D)
   t_end = time.time()
-  print('DEBUG LRE calc', t_end -t_begin)
-  print('Shape of LRe', LRe.shape)
-  print('Calculating CRe')
+  #print('DEBUG LRE calc', t_end -t_begin)
+  #print('Shape of LRe', LRe.shape)
+  #print('Calculating CRe')
   # creating CRe
   t_begin = time.time()
   CRe = np.matmul(phi_transpose_by_weight, ddvel_dx2_1D) + \
         np.matmul(phi_transpose_by_weight, ddvel_dy2_1D) + \
         np.matmul(phi_transpose_by_weight, ddvel_dz2_1D)
   t_end = time.time()
-  print('DEBUG CRe calc', t_end - t_begin)
-  print('Shape of CRe', CRe.shape)
-  print('Calculating Q')
+  #print('DEBUG CRe calc', t_end - t_begin)
+  #print('Shape of CRe', CRe.shape)
+  #print('Calculating Q')
   # creating Q[num_snapshots,num_snapshots,num_snapshots]
   Q = np.zeros([num_snapshots, num_snapshots, num_snapshots])
   t_begin = time.time()
@@ -535,8 +535,8 @@ def pod_rom_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
                   (np.multiply(phi_z_ND[:, i_mode], \
                                dphi_dz_1D.transpose())).transpose())
   t_end = time.time()
-  print('DEBUG Q calc', t_end - t_begin)
-  print('shape of Q', Q.shape)
+  #print('DEBUG Q calc', t_end - t_begin)
+  #print('shape of Q', Q.shape)
 
   return (L0, LRe, C0, CRe, Q)
 
@@ -572,7 +572,7 @@ def pod_rom_2basis_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
 
 
   ##-------derivative on curvilinear grid-----------
-  print('Calculating derivative of velocity-- in develop branch')
+  #print('Calculating derivative of velocity-- in develop branch')
   dvel_dx_1D = np.zeros([num_cell, num_dim])
   dvel_dy_1D = np.zeros([num_cell, num_dim])
   dvel_dz_1D = np.zeros([num_cell, num_dim])
@@ -609,7 +609,7 @@ def pod_rom_2basis_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
   (nul, nul, ddvel_dz2_1D) = curvder.derivative_3d \
     (dvel_dz_3D, xi_index, eta_index, zeta_index, num_cell, jacobian, accuracy)
 
-  print('Reconstructing derivative of velocity')
+  #print('Reconstructing derivative of velocity')
   dvel_dx_1D = np.reshape(dvel_dx_1D.transpose(), (num_cell * num_dim))
   dvel_dy_1D = np.reshape(dvel_dy_1D.transpose(), (num_cell * num_dim))
   dvel_dz_1D = np.reshape(dvel_dz_1D.transpose(), (num_cell * num_dim))
@@ -617,7 +617,7 @@ def pod_rom_2basis_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
   ddvel_dy2_1D = np.reshape(ddvel_dy2_1D.transpose(), (num_cell * num_dim))
   ddvel_dz2_1D = np.reshape(ddvel_dz2_1D.transpose(), (num_cell * num_dim))
 
-  print('Preparing phi')
+  #print('Preparing phi')
   phi_x_ND = np.zeros([num_cell, num_mode_phi])
   phi_y_ND = np.zeros([num_cell, num_mode_phi])
   phi_z_ND = np.zeros([num_cell, num_mode_phi])
@@ -676,7 +676,7 @@ def pod_rom_2basis_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
   (nul, nul, ddphidz2_1D) = curvder.derivative_3d \
     (dphidz_3D, xi_index, eta_index, zeta_index, num_cell, jacobian, accuracy)
 
-  print('Reconstructing derivative of phi')
+  #print('Reconstructing derivative of phi')
   dphi_dx_1D = np.reshape(dphidx_1D, (num_cell, num_dim, num_mode_phi))
   dphi_dy_1D = np.reshape(dphidy_1D, (num_cell, num_dim, num_mode_phi))
   dphi_dz_1D = np.reshape(dphidz_1D, (num_cell, num_dim, num_mode_phi))
@@ -763,15 +763,15 @@ def pod_rom_2basis_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
              
 
   
-  print('Calculating C0')
+  #print('Calculating C0')
   C0 = - np.matmul(phi_transpose_by_weight,
                    np.multiply(u0_ND, dvel_dx_1D) + \
                    np.multiply(v0_ND, dvel_dy_1D) + \
                    np.multiply(w0_ND, dvel_dz_1D))
 
 
-  print('shape of C0', C0.shape)
-  print('Calculating La')
+  #print('shape of C0', C0.shape)
+  #print('Calculating La')
   La = - np.matmul(\
     phi_transpose_by_weight,
     (np.multiply(phi_x_ND.transpose(), dvel_dx_1D)).transpose() + \
@@ -779,7 +779,7 @@ def pod_rom_2basis_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
     (np.multiply(phi_z_ND.transpose(), dvel_dz_1D)).transpose())
 
 
-  print('shape of La', La.shape)
+  #print('shape of La', La.shape)
   Lb = - np.matmul(phi_transpose_by_weight,
                    (np.multiply(u0_ND, psi_x.transpose())).transpose() + \
                    (np.multiply(v0_ND, psi_y.transpose())).transpose() + \
@@ -787,22 +787,22 @@ def pod_rom_2basis_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
 
 
 
-  print('shape of Lb', Lb.shape)
+  #print('shape of Lb', Lb.shape)
   # ------------ creating LRe[num_mode_phi,num_mode_psi]
   LRe = np.matmul(phi_transpose_by_weight,
                   dpsi_dx_1D + dpsi_dy_1D + dpsi_dz_1D)
 
-  print('shape of LRe', LRe.shape)
+  #print('shape of LRe', LRe.shape)
   # ------------ creating CRe
-  print('Calculating CRe')
+  #print('Calculating CRe')
   CRe = np.matmul(phi_transpose_by_weight, ddvel_dx2_1D) + \
         np.matmul(phi_transpose_by_weight, ddvel_dy2_1D) + \
         np.matmul(phi_transpose_by_weight, ddvel_dz2_1D)
 
-  print('shape of CRe', CRe.shape)
+  #print('shape of CRe', CRe.shape)
   # ------------ creating Q[num_snapshots,num_snapshots,num_snapshots]
   Q = np.zeros([num_mode_phi, num_mode_phi, num_mode_psi])
-  print('Calculating Q')
+  #print('Calculating Q')
 
   for i_mode in range(num_mode_phi):
     Q[:, i_mode, :] = \
@@ -814,7 +814,7 @@ def pod_rom_2basis_matrices_3d(xi_index, eta_index, zeta_index, cell_center,
                   (np.multiply(phi_z_ND[:, i_mode], \
                                psi_z.transpose())).transpose())
 
-  print('shape of Q', Q.shape)
+  #print('shape of Q', Q.shape)
   return (L0, LRe, C0, CRe, Q)
 
 # -----------------------------------------------------------------------------
@@ -828,7 +828,7 @@ def RHS_rk45(t, a, Re, char_L, L0, LRe, C0, CRe, Q):
   for i_modes in range(num_modes):
     rhs[i_modes] = rhs[i_modes] + np.matmul(np.matmul(aT, Q[i_modes,:,:]), a)
   t_end = time.time()
-  print('DEBUG in RHS of rk45', t_end - t_begin)
+  #print('DEBUG in RHS of rk45', t_end - t_begin)
   return rhs
 
 def RHS_rk45_boundary(t, a, Re, char_L, L0, LRe, C0, CRe, Q, B, B0, penalty):
@@ -866,7 +866,7 @@ def rom_calc_rk45(Re, char_L, L0, LRe, C0, CRe, Q, modal_coef, t_eval):
   aT = sol.y
   time = sol.t
   #print('Time', time)
-  print('Size of aT', aT.shape, modal_coef.shape)
+  #print('Size of aT', aT.shape, modal_coef.shape)
    
 #  import matplotlib.pyplot as plt
 #  plt.plot(modal_coef[:,0])

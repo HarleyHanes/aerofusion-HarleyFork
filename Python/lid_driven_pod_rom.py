@@ -11,6 +11,7 @@ from aerofusion.numerics import derivatives_curvilinear_grid as curvder
 from aerofusion.rom import incompressible_navier_stokes_rom as incrom
 from aerofusion.data import array_conversion as arr_conv
 from aerofusion.numerics import curl_calc as curl_calc
+import gc
 
 def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
          discretization, velocity_unreduced_1D_compact, integration_times):
@@ -25,6 +26,7 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
     cell_centroid = discretization["cell_centroid"]
     num_cell = discretization["num_cell"]
     weights_ND = discretization["weights_ND"]
+    del discretization
     num_xi = 258
     num_eta = 258
     num_zeta = 1
@@ -51,12 +53,12 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
     basis_extent_mat = np.empty((n_samp,0))
     #=============================Unapply normalization========================
     poi = un_normalize_poi(poi_normalized, poi_bounds)
-    print("poi: " + str(poi))
+    #print("poi: " + str(poi))
     del poi_normalized
     #================================Load POI Values===========================
     #Load pois and unnormalize
-    print("n_poi: " + str(n_poi))
-    print("n_samp: " + str(n_samp))
+    #print("n_poi: " + str(n_poi))
+    #print("n_samp: " + str(n_samp))
     if n_samp ==1:
         for i_poi in range(n_poi):
             if poi_selector[i_poi].lower() == 're':
@@ -117,6 +119,8 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
                                            axis=1)
             else :
                 raise Exception("Unrecognized poi name: " + str(poi_selector[i_poi]))
+    gc.collect()
+    #===============================Start model runs===========================
     for i_samp in range(n_samp):
         #Unpack POIs
         reynolds_number = reynolds_number_vec[i_samp]
@@ -131,7 +135,7 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
         x_boundary = Xi_mesh[0,:]
         boundary_vec = (np.abs(1-x_boundary)*np.abs(1+x_boundary))**boundary_exp
         
-        #Construct snapshot and pod
+        #--------------------Construct snapshot and pod------------------------
         if i_samp >= 1:
             basis_vort_vec_old = basis_vort_mat[i_samp-1]
             basis_orient_vec_old = basis_orient_mat[i_samp-1]
@@ -145,6 +149,7 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
                np.all(basis_y_loc_vec == basis_y_loc_vec_old) and \
                np.all(basis_extent_vec ==basis_extent_vec_old):
                    # Keep old poi
+                   print("Skipping Mean reduction")
                    pass
             else:
                 vel_0_1D_compact = get_artificial_mean(\
@@ -168,6 +173,8 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
                                                      vel_0_1D_compact,\
                                                      weights_ND, \
                                                      num_modes)
+        
+        #--------------------------ROM Matrix calculation----------------------
         #Convert 1D mean reduction to 3D for ROM matrix calculations
         vel_0_1D = arr_conv.array_compact_to_1D(vel_0_1D_compact, n_dim, n_cell)
         vel_0_3D = np.empty(((num_xi, num_eta, num_zeta, n_dim)))
@@ -177,7 +184,7 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
         vel_0_2D = vel_0_3D[:,:,0,:]
         #Convert from compact to 3D variations
         #Caclulate ROM matrices
-        print("Calculating Jacobian")
+        #print("Calculating Jacobian")
         jacobian = curvder.jacobian_of_grid_2d2(\
             Xi,
             Eta,
@@ -199,6 +206,7 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
               vel_0_3D,
               jacobian,
               6)
+                
         #print(np.max(LRe_calc))
         #print(np.max(L0_calc))
         #print(np.max(C0_calc))
@@ -215,16 +223,13 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
           weights_ND,
           vel_0_2D, 
           boundary_vec) 
-        #LRe_calc=LRe_calc*(1/17000)
-        #CRe_calc=CRe_calc*(1/17000)
-        #print(' - Saving matrices to file', rom_matrices_filename)
-        #Saving Matrices
-    
-        # print('ROM RK45 integration over times', integration_times)
+        del jacobian, vel_0_2D
+        
+        gc.collect()
+        #-----------------------------Integrate ROM----------------------------
         char_L = 1
         
-        #Integrate ROM
-        print("Solving System")
+        #print("Solving System")
         aT = incrom.rom_calc_rk45_boundary(\
                 reynolds_number,
                 char_L,
@@ -238,20 +243,25 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
                 modal_coeff,
                 integration_times,
                 penalty_strength)
+
         modal_coeff = aT[:,[-1]]
         mean_reduced_velocity = np.matmul(phi, modal_coeff).flatten()
         velocity_rom_1D_compact = mean_reduced_velocity + vel_0_1D_compact
         #Transfer to 2D
         velocity_rom_1D = arr_conv.array_compact_to_1D(velocity_rom_1D_compact, n_dim, n_cell)
+
         velocity_rom_2D = np.zeros((num_xi, num_eta, n_dim))
         for i_dim in range(2):
               velocity_rom_2D[:,:,i_dim] = arr_conv.array_1D_to_2D(\
                 Xi, Eta, num_xi, num_eta, velocity_rom_1D[:,i_dim])
         vorticity_2D = curl_calc.curl_2d(-cell_centroid[:,0,0,1], -cell_centroid[0,:,0,0],
                                          velocity_rom_2D[:, :, 0], velocity_rom_2D[:, :,1])
-        
-        #Get QOI values
-        print("Getting QOIs")
+        del mean_reduced_velocity, velocity_rom_1D_compact,\
+            velocity_rom_1D, L0_calc, LRe_calc, C0_calc, CRe_calc, Q_calc, \
+            B_calc, B0_calc
+        gc.collect()
+        #----------------------------Get QOI values----------------------------
+        #print("Getting QOIs")
         qois_samp = np.empty((0,))
         for i_qoi in range(n_qoi):
             if qoi_selector[i_qoi].lower() == "energy":
@@ -267,11 +277,11 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
                 raise Exception("Unknown qoi: " + str(qoi_selector[i_qoi]))
         if i_samp == 0:
             qois = np.empty((n_samp, qois_samp.size))
-        print(qois_samp)
+        #print(qois_samp)
         qois[i_samp] = qois_samp
         del qois_samp
-        print(qois)
-    
+        #print(qois)
+    del phi, vorticity_2D, modal_coeff
     return qois.squeeze()
     
 def normalize_pois(poi_base, bounds):

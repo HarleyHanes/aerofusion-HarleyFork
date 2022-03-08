@@ -27,7 +27,7 @@ def Find_Modes(A, w, r):
   phi = np.matmul(A,phi)
 
   Lambda = np.sqrt(np.diag(sigma[0:r]))
-  print('A - A_ROM =', norm( A - np.matmul(phi, a0)))
+  #print('A - A_ROM =', norm( A - np.matmul(phi, a0)))
   return (phi,a0, np.sqrt(sigma))
 
 # -----------------------------------------------------------------------------

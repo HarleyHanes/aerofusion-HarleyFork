@@ -7,7 +7,7 @@ import aerofusion.data.array_conversion as arr_conv
 #from aerofusion.rom import incompressible_navier_stokes_rom as incrom
 from aerofusion.rom import incompressible_navier_stokes_rom as incrom
 import numpy as np
-import logging
+#import logging
 import argparse
 import libconf
 from aerofusion.plot.plot_2D import plot_contour
@@ -18,14 +18,22 @@ import scipy.io as mio
 from lid_driven_pod_rom import main as lid_driven_pod_rom
 import mat73
 from lid_driven_pod_rom import normalize_pois
+import mpi4py.MPI as MPI
+import gc
 
 def main(argv=None):
+    mpi_comm = MPI.COMM_WORLD
+    mpi_rank = mpi_comm.Get_rank()
+    mpi_size = mpi_comm.Get_size()
+    print("Hello from thread " + str(mpi_rank) + ".")
+    
     #===============================Run Options================================
     n_modes = 100
-    n_samp_morris = 4
+    n_samp_morris = 40
     n_snapshot = 150
     t_forward = 2
     l_morris = 1/40
+    logging = 2
     
     #rom_matrices_filename="../../lid_driven_penalty/rom_matrices_s500_m" + str(modes) + ".npz"
     save_path = "../../lid_driven_data/morris_screening_s"+str(n_snapshot) + \
@@ -38,16 +46,16 @@ def main(argv=None):
                           "basis vort (TL)", "basis orient (TL)", "basis x-location (TL)",
                           "basis y-location (TL)", "basis extent (TL)"])
     #poi_base = np.array([16000, 0, 1, 1, 0, -.75, .75, 1])
-    #poi_base = np.array([17000, -1.5, 1e-2, 1, 0, -.75, .75, 1])
-    poi_base = np.array([17000, -1.5, 1e-2, 1, -.75, .75])
+    poi_base = np.array([17000, -1.5, 1e-2, 1, 0, -.75, .75, 1])
+    #poi_base = np.array([17000, -1.5, 1e-2, 1, -.75, .75])
     poi_ranges = np.array([[16500, 17500], \
                            [-2, -1],\
                            [0, 1e-2],\
                            [.9, 1.1],\
-                           #[0, np.pi/2],\
+                           [0, np.pi/2],\
                            [-.1, .1]+poi_base[5],\
-                           [-.1, .1]+poi_base[6]#,\
-                           #[1, 1.5]
+                           [-.1, .1]+poi_base[6],\
+                           [1, 1.5]
                            ])
     # poi_ranges = np.array([[12000, 18000], \
     #                        [-2, 0],\
@@ -63,11 +71,13 @@ def main(argv=None):
                                       [0,1],\
                                       [0,1],\
                                       [0,1],\
-                                      #[0,1],\
-                                      #[0,1],\
+                                      [0,1],\
+                                      [0,1],\
                                       [0,1]]).transpose()
     qoi_names = np.array(["energy", "max vorticity", "min vorticity"])
     #======================Load velocity and discretization data=====================
+    if logging:
+        print("Loading data")
     integration_times=np.arange(0,.1*n_snapshot*t_forward, .1)
     
     num_dim  = 2
@@ -76,7 +86,8 @@ def main(argv=None):
     num_zeta = 1
     
     mat = mat73.loadmat(data_folder + velocity_file)
-    velocity_unreduced_1D_compact=mat['X'][:]
+    velocity_unreduced_1D_compact=mat['X'][:,0:n_snapshot]
+    del mat
     
     mat2 = mio.loadmat(data_folder + weights_file)
     weights = np.ndarray.flatten(mat2['W'])
@@ -87,6 +98,8 @@ def main(argv=None):
     
     mat2=mio.loadmat(data_folder + "Eta_hr.mat")
     Eta=np.ndarray.flatten(mat2['Eta'])
+    
+    del mat2
     
     centroid_file=np.load(data_folder + "cell_center_high_res.npz")
     cell_centroid=np.zeros((num_xi,num_eta,num_zeta,num_dim))
@@ -113,11 +126,14 @@ def main(argv=None):
                       "num_cell": num_cell,
                       "weights_ND": weights_ND
                   }
+    gc.collect()
     #========================Setup Executing function==========================
     eval_fcn = lambda poi_normalized : lid_driven_pod_rom(\
                     poi_normalized, poi_names, qoi_names, poi_ranges, n_modes,\
                     discretization, velocity_unreduced_1D_compact, integration_times)
-
+    
+    if logging:
+        print("Setting up model")
     model = uq.Model(eval_fcn = eval_fcn,
                       base_poi = poi_normalized,
                       dist_type = "uniform",
@@ -129,21 +145,21 @@ def main(argv=None):
     #Set options
     uqOptions = uq.Options()
     uqOptions.lsa.run=False
-    uqOptions.lsa.runActiveSubspace = False
+    uqOptions.lsa.run_param_subset = False
     uqOptions.gsa.run=True
-    uqOptions.gsa.runMorris = True
-    uqOptions.gsa.runSobol = False
+    uqOptions.gsa.run_morris = True
+    uqOptions.gsa.run_sobol = False
     uqOptions.gsa.n_samp_morris = n_samp_morris
     uqOptions.gsa.l_morris = l_morris
     uqOptions.save = True
     uqOptions.path = save_path
     uqOptions.display = True
     uqOptions.print= True
-    uqOptions.path = "lid_morris/"
+    uqOptions.path = data_folder + "sensitivity/s" + str(n_snapshot) + "m" + str(n_modes) + "_l" + str(int(1/l_morris)) + "_"
 
     #Run SA
     print("Running Sensitivity Analysis")
-    results=uq.run_uq(model, uqOptions)
+    results=uq.run_uq(model, uqOptions, logging= logging)
     
 '''
     #Reshape Sensitivities

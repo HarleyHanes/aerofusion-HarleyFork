@@ -38,7 +38,7 @@ from aerofusion.pod import pod_modes
 import mat73
 
 def main(velocity_1D_compact, u0_type, artificial_mean_reduced_velocity, weights_ND, modes):
-    
+    #print("velocity shape: " + str(velocity_1D_compact.shape))
     num_snapshots = velocity_1D_compact.shape[1]
     
     

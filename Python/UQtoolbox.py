@@ -16,8 +16,9 @@ from tabulate import tabulate                       #Used for printing tables to
 import SALib.sample.saltelli as sobol
 import scipy.stats as sct
 
+import mpi4py.MPI as MPI
+
 #Package Modules
-sys.path.insert(0, '../UQtoolbox')
 import lsa
 import gsa
 #import seaborne as seaborne
@@ -60,8 +61,8 @@ class Options:
 class Model:
     #Model sets should be initialized with base parameter settings, covariance Matrix, and eval function that
     #   takes in a vector of POIs and outputs a vector of QOIs
-    def __init__(self,base_poi=np.empty(0), name_poi = np.empty(0), \
-                 name_qoi= np. empty(0), cov=np.empty(0), \
+    def __init__(self,base_poi=np.empty(0), name_poi = "auto", \
+                 name_qoi= "auto", cov=np.empty(0), \
                  eval_fcn=np.empty(0), dist_type='uniform', dist_param="auto"):
         #------------------------base_poi, n_poi, name_poi---------------------
         #Assign base_poi and n_poi
@@ -78,34 +79,33 @@ class Model:
         self.n_poi=self.base_poi.size
         
         #Assign name_poi----------------UNFINISHED VALUE CHECKING
+        
+        POInumbers=np.arange(0,self.n_poi)
+        name_poi_auto=np.char.add('POI',POInumbers.astype('U'))
         #Check name_poi is string
         if type(name_poi)==np.ndarray:
             #Check data type
             if name_poi.size!= self.n_poi:
                 raise Exception("Incorrect number of entries in name_poi")
-            self.name_poi=name_poi
         elif type(name_poi)==list:
             #Check data type
             if len(name_poi)!= self.n_poi:
                 raise Exception("Incorrect number of entries in name_poi")
-            self.name_poi=np.array(name_poi)
+            name_poi=np.array(name_poi)
         elif type(name_poi)==str and name_poi.lower()!="auto":
             if self.n_poi!=1:
                 raise Exception("Only one qoi name entered for >1 pois")
-            else :
-                self.name_qoi = name_qoi
         else :
-            POInumbers=np.arange(0,self.n_poi)
-            name_poi=np.char.add('POI',POInumbers.astype('U'))
             if name_poi.lower()!= "auto":
                 warnings.warn("Unrecognized name_poi entry, using automatic values")
+            name_poi = name_poi_auto
         if (name_poi.size != self.n_poi) & (name_poi.size !=0):   #Check that correct size if given
             warnings.warn("name_poi entered but the number of names does not match the number of POIs. Ignoring names.")
             name_poi=np.empty(0)
-        if name_poi.size==0:                                           #If not given or incorrect size, number POIs
-            POInumbers=np.arange(0,self.n_poi)
-            name_poi=np.char.add('POI',POInumbers.astype('U'))
-            
+        if name_poi.size==0:                       
+            name_poi = name_poi_auto
+        self.name_poi = name_poi
+        del name_poi
         #-----------------eval_fcn, base_qoi, n_qoi, name_qoi------------------
         #Assign evaluation function and compute base_qoi
         self.eval_fcn=eval_fcn
@@ -116,34 +116,33 @@ class Model:
         self.n_qoi=len(self.base_qoi)
         
         #Assign name_qoi----------------UNFINISHED VALUE CHECKING
+        #Formulate automatic names so they can be referenced in each case
+        QOInumbers=np.arange(0,self.n_qoi)
+        name_qoi_auto=np.char.add('POI',QOInumbers.astype('U'))
         #Check name_qoi is string
         if type(name_qoi)==np.ndarray:
             #Check data type
             if name_qoi.size!= self.n_qoi:
                 raise Exception("Incorrect number of entries in name_qoi")
-            self.name_qoi = name_qoi
         elif type(name_qoi)==list:
             #Check data type
             if len(name_qoi)!= self.n_qoi:
                 raise Exception("Incorrect number of entries in name_qoi")
-            self.name_qoi=np.array(name_qoi)
+            name_qoi=np.array(name_qoi)
         elif type(name_qoi)==str and name_qoi.lower()!="auto":
             if self.n_qoi!=1:
                 raise Exception("Only one qoi name entered for >1 qois")
-            else: 
-                self.name_qoi = name_qoi
         else :
-            QOInumbers=np.arange(0,self.n_qoi)
-            name_qoi=np.char.add('POI',QOInumbers.astype('U'))
-            if name_poi.lower()!= "auto":
+            if name_qoi.lower()!= "auto":
                 warnings.warn("Unrecognized name_qoi entry, using automatic values")
-        self.name_qoi = name_qoi
-        if (self.name_qoi.size !=self.n_qoi) & (self.name_qoi.size !=0):    #Check names if given match number of QOIs
+            name_qoi= name_qoi_auto
+        if (name_qoi.size !=self.n_qoi) & (name_qoi.size !=0):    #Check names if given match number of QOIs
             warnings.warn("name_qoi entered but the number of names does not match the number of QOIs. Ignoring names.")
-            self.name_qoi = np.empty(0)
-        if self.name_qoi.size==0:                                 #If not given or incorrect size, number QOIs
-            QOInumbers = np.arange(0, self.n_qoi)
-            self.name_qoi = np.char.add('QOI', QOInumbers.astype('U'))
+            name_qoi = name_qoi_auto
+        if name_qoi.size==0:                                 #If not given or incorrect size, number QOIs
+            name_qoi = name_qoi_auto
+        self.name_qoi = name_qoi
+        del name_qoi
             
             
             
@@ -194,7 +193,7 @@ class Model:
                     del dist_param
             else:
                 raise Exception("Incorrect shape of dist_param. Given shape: "\
-                                + str(dist_param.shape) + ", desired shape: ... x n_poi") 
+                                + dist_param.shape + ", desired shape: ... x n_poi") 
         elif dist_param.lower() == "cov":
             if np.any(self.dist_type.lower()==["normal", "saltelli normal"]):
                 self.dist_param=[self.base_poi, np.diag(self.cov,k=0)]   
@@ -231,7 +230,7 @@ class Results:
 #   sensitivity analysis and global sensitivity analysis can be run independently with LSA and GSA respectively
 
 ##--------------------------------------RunUQ-----------------------------------------------------
-def run_uq(model, options):
+def run_uq(model, options, logging = False):
     """Runs both the local and global sensitivity, and result printing, saving, and plotting.
     
     Parameters
@@ -240,16 +239,30 @@ def run_uq(model, options):
         Object of class Model holding run information.
     options : Options
         Object of class Options holding run settings.
+    logging : bool or int
+        Holds level 
         
     Returns
     -------
     Results 
         Object of class Results holding all run results.
     """
+    mpi_comm = MPI.COMM_WORLD
+    mpi_rank = mpi_comm.Get_rank()
+    mpi_size = mpi_comm.Get_size()
+    
+    if logging : 
+        print("Starting UQ with precessor " + str(mpi_rank) + " of "+ str(mpi_size) + ".")
+    
+    #Only hold results in base processor
     results = Results()
-    #Run Local Sensitivity Analysis
-    if options.lsa.run:
+        
+    #Run Local Sensitivity Analysis only on base processor
+    if mpi_rank == 0 and options.lsa.run:
+        if logging: 
+            print("Starting LSA")
         results.lsa = lsa.run_lsa(model, options.lsa)
+        #---------------Broadcast results.lsa to other threads-----------
 
     #Run Global Sensitivity Analysis
     # if options.gsa.run:
@@ -258,20 +271,28 @@ def run_uq(model, options):
         #     results.gsa=GSA(results.lsa.reducedModel, options)
         # else:
     if options.gsa.run:
-        results.gsa = gsa.run_gsa(model, options.gsa)
+        if logging: 
+            print("Starting GSA")
+        results.gsa = gsa.run_gsa(model, options.gsa, logging = logging)
 
-    #Print Results
-    if options.display:
+    #Print, save, and plot Results only on thread 0
+    if options.display and mpi_rank ==0:
+        if logging: 
+            print("Printing Results")
         print_results(results,model,options)                     #Print results to standard output path
 
-    if options.save:
+    if options.save and mpi_rank == 0:
+        if logging: 
+            print("Saving Results")
         original_stdout = sys.stdout                            #Save normal output path
         sys.stdout=open(options.path + 'Results.txt', 'a+')            #Change output path to results file
         print_results(results,model,options)                     #Print results to file
         sys.stdout=original_stdout                              #Revert normal output path
 
     #Plot Samples
-    if options.gsa.run_sobol & options.gsa.run:
+    if options.gsa.run_sobol and options.gsa.run and mpi_rank == 0:
+        if logging: 
+            print("Plotting Results")
         plot_gsa(model, results.gsa.samp_d, results.gsa.f_d, options)
 
     return results
@@ -319,23 +340,24 @@ def print_results(results,model,options):
                                                results.gsa.sobol_tot.reshape(model.n_poi,1)), 1),
                                headers=["", "1st Order", "Total Sensitivity"]))
             else:
-                for iQOI in range(0,model.n_qoi):
-                    print('\n Sobol Indices for '+ model.name_qoi[iQOI])
-                    print(tabulate(np.concatenate((model.name_poi.reshape(model.n_poi,1),results.gsa.sobol_base[[iQOI],:].reshape(model.n_poi,1), \
-                        results.gsa.sobol_tot[[iQOI],:].reshape(model.n_poi,1)),1), headers = ["", "1st Order", "Total Sensitivity"]))
+                for i_qoi in range(0,model.n_qoi):
+                    print('\n Sobol Indices for '+ model.name_qoi[i_qoi])
+                    print(tabulate(np.concatenate((model.name_poi.reshape(model.n_poi,1),results.gsa.sobol_base[[i_qoi],:].reshape(model.n_poi,1), \
+                        results.gsa.sobol_tot[[i_qoi],:].reshape(model.n_poi,1)),1), headers = ["", "1st Order", "Total Sensitivity"]))
     
         if options.gsa.run_morris:
             if model.n_qoi==1:
                 print('\n Morris Screening Results for' + model.name_qoi[0])
-                print(tabulate(np.concatenate((model.name_poi.reshape(model.n_poi, 1), results.gsa.mu_star.reshape(model.n_poi, 1), \
-                                               results.gsa.sigma2.reshape(model.n_poi, 1)), 1),
-                    headers=["", "mu_star", "sigma2"]))
+                print(tabulate(np.concatenate((model.name_poi.reshape(model.n_poi, 1), results.gsa.morris_mean_abs.reshape(model.n_poi, 1), \
+                                               results.gsa.morris_std.reshape(model.n_poi, 1)), 1),
+                    headers=["", "mu_star", "sigma"]))
             else:
-                print('\n Morris Screening Results for' + model.name_qoi[iQOI])
-                print(tabulate(np.concatenate(
-                    (model.name_poi.reshape(model.n_poi, 1), results.gsa.mu_star[[iQOI], :].reshape(model.n_poi, 1), \
-                     results.gsa.sigma2[[iQOI], :].reshape(model.n_poi, 1)), 1),
-                    headers=["", "mu_star", "sigma2"]))
+                for i_qoi in range(model.n_qoi):
+                    print('\n Morris Screening Results for' + model.name_qoi[i_qoi])
+                    print(tabulate(np.concatenate(
+                        (model.name_poi.reshape(model.n_poi, 1), results.gsa.morris_mean_abs[:,[i_qoi]].reshape(model.n_poi, 1), \
+                     results.gsa.morris_std[:,[i_qoi]].reshape(model.n_poi, 1)), 1),
+                    headers=["", "mu_star", "sigma"]))
 
 ###----------------------------------------------------------------------------------------------
 ###-------------------------------------Support Functions----------------------------------------
@@ -386,31 +408,31 @@ def plot_gsa(model, sample_mat, eval_mat, options):
 
     #Plot QOI-QOI correlationa and distributions
     figure, axes=plt.subplots(nrows=model.n_qoi, ncols= model.n_qoi, squeeze=False)
-    for iQOI in range(0,model.n_qoi):
-        for jQOI in range(0,iQOI+1):
-            if iQOI==jQOI:
-                axes[iQOI, jQOI].hist([eval_mat[:,iQOI]], bins=41)
+    for i_qoi in range(0,model.n_qoi):
+        for j_qoi in range(0,i_qoi+1):
+            if i_qoi==j_qoi:
+                axes[i_qoi, j_qoi].hist([eval_mat[:,i_qoi]], bins=41)
             else:
-                axes[iQOI, jQOI].plot(eval_mat[plotPoints,iQOI], eval_mat[plotPoints,jQOI],'b*')
-            if jQOI==0:
-                axes[iQOI,jQOI].set_ylabel(model.name_qoi[iQOI])
-            if iQOI==model.n_qoi-1:
-                axes[iQOI,jQOI].set_xlabel(model.name_qoi[jQOI])
+                axes[i_qoi, j_qoi].plot(eval_mat[plotPoints,i_qoi], eval_mat[plotPoints,j_qoi],'b*')
+            if j_qoi==0:
+                axes[i_qoi,j_qoi].set_ylabel(model.name_qoi[i_qoi])
+            if i_qoi==model.n_qoi-1:
+                axes[i_qoi,j_qoi].set_xlabel(model.name_qoi[j_qoi])
             if model.n_qoi==1:
-                axes[iQOI,jQOI].set_ylabel('Instances')
+                axes[i_qoi,j_qoi].set_ylabel('Instances')
     figure.tight_layout()
     if options.path:
         plt.savefig(options.path+"QOIcorrelation.png")
 
     #Plot POI-QOI correlation
     figure, axes=plt.subplots(nrows=model.n_qoi, ncols= model.n_poi, squeeze=False)
-    for iQOI in range(0,model.n_qoi):
+    for i_qoi in range(0,model.n_qoi):
         for jPOI in range(0, model.n_poi):
-            axes[iQOI, jPOI].plot(sample_mat[plotPoints,jPOI], eval_mat[plotPoints,iQOI],'b*')
+            axes[i_qoi, jPOI].plot(sample_mat[plotPoints,jPOI], eval_mat[plotPoints,i_qoi],'b*')
             if jPOI==0:
-                axes[iQOI,jPOI].set_ylabel(model.name_qoi[iQOI])
-            if iQOI==model.n_qoi-1:
-                axes[iQOI,jPOI].set_xlabel(model.name_poi[jPOI])
+                axes[i_qoi,jPOI].set_ylabel(model.name_qoi[i_qoi])
+            if i_qoi==model.n_qoi-1:
+                axes[i_qoi,jPOI].set_xlabel(model.name_poi[jPOI])
     if options.path:
         plt.savefig(options.path+"POI_QOIcorrelation.png")
     #Display all figures
