@@ -14,7 +14,7 @@ from aerofusion.numerics.derivatives import FD_derivative_2nd_order
 from aerofusion.numerics.derivatives import Find_Derivative_FD
 from aerofusion.numerics.derivatives_curvilinear_grid import jacobian_of_grid_2d2
 
-def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
+def main(basis_speed_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
          basis_extent_vec, Xi, Eta, cell_centroid, base_extent = 20, plot = False):
     
     num_dim  = 2
@@ -36,17 +36,24 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
                         ((COV[1,0]+COV[0,1])*(x-xCent)+2*COV[1,1]*(y-yCent))
     fcn_v = lambda xCent, yCent, x,y, COV: expRBF(xCent, yCent, x, y, COV) * \
                         ((COV[1,0]+COV[0,1])*(y-yCent)+2*COV[0,0]*(x-xCent))
+    dv_dx = lambda xCent, yCent, x,y, COV: expRBF(xCent,yCent,x,y,COV) * \
+        (2*COV[1,1]-((COV[1,0]+COV[0,1])*(y-yCent)+2*COV[0,0]*(x-xCent))**2)
+    du_dy = lambda xCent, yCent, x,y, COV: expRBF(xCent,yCent,x,y,COV) * \
+        (-2*COV[0,0]+((COV[1,0]+COV[0,1])*(x-xCent)+2*COV[1,1]*(y-yCent))**2)
+    vorticity_fcn = lambda xCent, yCent, x, y, COV: dv_dx(xCent, yCent, x, y, COV)- \
+        du_dy(xCent, yCent, x, y, COV)
     #expRBF = lambda xCent, yCent, x, y, COV: np.exp(-(x**2+y**2))
     #expRBF_dx = lambda x,y: -2*x*np.exp(-(x**2+y**2))
     #expRBF_dy = lambda x,y: -2*y*np.exp(-(x**2+y**2))
     
     velocity_2D = np.zeros((num_xi, num_eta, num_dim))
+    vorticity_analytic = np.zeros((num_xi, num_eta))
     
 
     for i_basis in range(len(basis_orient_vec)):
             #load in parameters for previty
             orient = basis_orient_vec[i_basis]
-            max_vort = basis_vort_vec[i_basis]
+            max_speed = basis_speed_vec[i_basis]
             x0 = basis_x_loc_vec[i_basis]
             y0 = basis_y_loc_vec[i_basis]
             rel_extent = basis_extent_vec[i_basis]
@@ -118,22 +125,28 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
             # plt.title("v error")
             # plt.show()
             
+            
+            
             #Convert to vorticity 
-            vorticity = \
-              curl_calc.curl_2d(-cell_centroid[:,0,0,1], -cell_centroid[0,:,0,0],
-                basis_vel_2D[:,:,0], basis_vel_2D[:,:,1])
-            print("max vort: " + str(np.max(np.abs(vorticity))))
+            max_speed_basis = np.max(np.abs(np.sqrt(basis_vel_2D[:,:,0]**2+basis_vel_2D[:,:,1]**2)))
+            #print("max speed: " + str(max_speed_basis))
             #Determine how much the voriticity would need to be scaled by so we
             # can rescale the velocity by the same amount since their magnitudes
             # follow scalar multiple relationship
-            prop_vort_change = np.max(np.abs(vorticity))/max_vort
-            print("vort change: " + str(prop_vort_change))
-            basis_vel_2D = basis_vel_2D/ prop_vort_change
+            prop_vel_change = max_speed_basis/ max_speed
+            #print("vel change: " + str(prop_vel_change))
+            basis_vel_2D = basis_vel_2D/ prop_vel_change
             
             velocity_2D += basis_vel_2D
+            vorticity_analytic += vorticity_fcn(x0, y0, cell_centroid[:,:,0,0],\
+                                                cell_centroid[:,:,0,1], cov)
             
     
     #------------------------Get velocity_1D_compact
+    vorticity = \
+      curl_calc.curl_2d(-cell_centroid[:,0,0,1], -cell_centroid[0,:,0,0],
+        velocity_2D[:,:,0], velocity_2D[:,:,1])
+    #print("max vort: " + str(np.max(np.abs(vorticity))))
 
     #Convert to 1D
     velocity_1D=np.empty((num_cell,2))
@@ -172,8 +185,17 @@ def main(basis_vort_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
         plot_pcolormesh(\
           cell_centroid[:,:,0,0],
           cell_centroid[:,:,0,1],
-          vorticity/ prop_vort_change,
+          vorticity,
           "artificial_vort",
+          vmin = "auto", #-np.max(np.abs(data_2D)),
+          vmax = "auto", #np.max(np.abs(data_2D)),
+          colorbar_label= "vorticity",
+          font_size = 30)
+        plot_pcolormesh(\
+          cell_centroid[:,:,0,0],
+          cell_centroid[:,:,0,1],
+          vorticity_analytic,
+          "artificial_vort analytic",
           vmin = "auto", #-np.max(np.abs(data_2D)),
           vmax = "auto", #np.max(np.abs(data_2D)),
           colorbar_label= "vorticity",

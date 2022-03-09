@@ -14,7 +14,8 @@ from aerofusion.numerics import curl_calc as curl_calc
 import gc
 
 def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
-         discretization, velocity_unreduced_1D_compact, integration_times):
+         discretization, velocity_unreduced_1D_compact, integration_times,
+         center_mat = np.empty((0)), local_radius = .2):
     
     
     #=============================Load Discretization==========================
@@ -44,7 +45,7 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
         raise Exception("poi and poi_selector different lengths")
     n_qoi = qoi_selector.size
     #Intialize matrices for local POIs to improve processing
-    basis_vort_mat = np.empty((n_samp,0))
+    basis_speed_mat = np.empty((n_samp,0))
     basis_orient_mat = np.empty((n_samp,0))
     basis_x_loc_mat = np.empty((n_samp,0))
     basis_y_loc_mat = np.empty((n_samp,0))
@@ -65,8 +66,8 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
                 boundary_exp_vec = poi[[i_poi]]
             elif poi_selector[i_poi].lower() == 'penalty strength':
                 pen_strength_vec = poi[[i_poi]]
-            elif poi_selector[i_poi].lower()[0:10] == 'basis vort':
-                basis_vort_mat=np.append(basis_vort_mat, \
+            elif poi_selector[i_poi].lower()[0:11] == 'basis speed':
+                basis_speed_mat=np.append(basis_speed_mat, \
                                          poi[i_poi].reshape(1,1),\
                                          axis=1)
             elif poi_selector[i_poi].lower()[0:12] == 'basis orient':
@@ -95,8 +96,8 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
                 boundary_exp_vec = poi[:, i_poi]
             elif poi_selector[i_poi].lower() == 'penalty strength':
                 pen_strength_vec = poi[:,i_poi]
-            elif poi_selector[i_poi].lower()[0:10] == 'basis vort':
-                basis_vort_mat=np.append(basis_vort_mat, \
+            elif poi_selector[i_poi].lower()[0:11] == 'basis speed':
+                basis_speed_mat=np.append(basis_speed_mat, \
                                          poi[:,i_poi].reshape(n_samp,1),\
                                          axis=1)
             elif poi_selector[i_poi].lower()[0:12] == 'basis orient':
@@ -116,7 +117,8 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
                                            poi[:,i_poi].reshape(n_samp,1), \
                                            axis=1)
             else :
-                raise Exception("Unrecognized poi name: " + str(poi_selector[i_poi]))
+                print("Poi_name: " + str(poi_selector[i_poi]))
+                raise Exception("Unrecognized poi name")
     gc.collect()
     #===============================Start model runs===========================
     for i_samp in range(n_samp):
@@ -124,7 +126,7 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
         reynolds_number = reynolds_number_vec[i_samp]
         boundary_exp = 10**(boundary_exp_vec[i_samp])
         penalty_strength = pen_strength_vec[i_samp]
-        basis_vort_vec = basis_vort_mat[i_samp]
+        basis_speed_vec = basis_speed_mat[i_samp]
         basis_orient_vec = basis_orient_mat[i_samp]
         basis_x_loc_vec = basis_x_loc_mat[i_samp]
         basis_y_loc_vec = basis_y_loc_mat[i_samp]
@@ -135,23 +137,23 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
         
         #--------------------Construct snapshot and pod------------------------
         if i_samp >= 1:
-            basis_vort_vec_old = basis_vort_mat[i_samp-1]
+            basis_speed_vec_old = basis_speed_mat[i_samp-1]
             basis_orient_vec_old = basis_orient_mat[i_samp-1]
             basis_x_loc_vec_old = basis_x_loc_mat[i_samp-1]
             basis_y_loc_vec_old = basis_y_loc_mat[i_samp-1]
             basis_extent_vec_old = basis_extent_mat[i_samp-1]
             #If mean reduction is same as previous, do not run basis reduction
-            if np.all(basis_vort_vec == basis_vort_vec_old) and \
+            if np.all(basis_speed_vec == basis_speed_vec_old) and \
                np.all(basis_orient_vec == basis_orient_vec_old) and \
                np.all(basis_x_loc_vec == basis_x_loc_vec_old) and \
                np.all(basis_y_loc_vec == basis_y_loc_vec_old) and \
                np.all(basis_extent_vec ==basis_extent_vec_old):
                    # Keep old poi
-                   print("Skipping Mean reduction")
+                   #print("Skipping Mean reduction")
                    pass
             else:
                 vel_0_1D_compact = get_artificial_mean(\
-                                  basis_vort_vec, basis_orient_vec, basis_x_loc_vec,\
+                                  basis_speed_vec, basis_orient_vec, basis_x_loc_vec,\
                                   basis_y_loc_vec, basis_extent_vec, Xi, Eta, \
                                   cell_centroid)
                 (phi, modal_coeff, pod_lambda) = get_pod(velocity_unreduced_1D_compact, \
@@ -163,7 +165,7 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
                 
         else:
             vel_0_1D_compact = get_artificial_mean(\
-                              basis_vort_vec, basis_orient_vec, basis_x_loc_vec,\
+                              basis_speed_vec, basis_orient_vec, basis_x_loc_vec,\
                               basis_y_loc_vec, basis_extent_vec, Xi, Eta, \
                               cell_centroid)
             (phi, modal_coeff, pod_lambda) = get_pod(velocity_unreduced_1D_compact, \
@@ -271,6 +273,14 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
             elif qoi_selector[i_qoi].lower () == "min vorticity":
                 min_vort = np.min(vorticity_2D)
                 qois_samp = np.append(qois_samp, min_vort)
+            elif qoi_selector[i_qoi].lower()[:15] == "local vorticity":
+                center_number = int(qoi_selector[i_qoi][16:])
+                x_cent = center_mat[center_number, 0]
+                y_cent = center_mat[center_number, 1]
+                vorticity_local_2D = local_response(vorticity_2D, cell_centroid, \
+                                                      x_cent, y_cent, local_radius)
+                vort_mag = np.max(np.abs(vorticity_local_2D))
+                qois_samp = np.append(qois_samp, vort_mag)
             else :
                 raise Exception("Unknown qoi: " + str(qoi_selector[i_qoi]))
         if i_samp == 0:
@@ -280,7 +290,17 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
         del qois_samp
         #print(qois)
     del phi, vorticity_2D, modal_coeff
+    gc.collect
     return qois.squeeze()
+
+def local_response(data_2D, cell_centroid, x_cent, y_cent, radius):
+    #Identify where in cell_centroid is within radius
+    region = np.sqrt((cell_centroid[:,:,0,0] - x_cent)**2+\
+                     (cell_centroid[:,:,0,1] - y_cent)**2) <= radius
+    #Extract those voriticity values
+    data_reduced_2D = data_2D * region
+    #Take max and min
+    return data_reduced_2D
     
 def normalize_pois(poi_base, bounds):
     poi_normalized = np.empty(poi_base.shape)

@@ -31,7 +31,7 @@ def main(argv=None):
     n_modes = 100
     n_samp_morris = 40
     n_snapshot = 150
-    t_forward = 2
+    t_forward = 1
     l_morris = 1/40
     logging = 2
     
@@ -43,20 +43,42 @@ def main(argv=None):
     velocity_file = "re17000_hr.mat"
     #============================Set POIs and QOIs=============================
     poi_names = np.array(["Re", "boundary exponent mult", "penalty strength", \
-                          "basis vort (TL)", "basis orient (TL)", "basis x-location (TL)",
-                          "basis y-location (TL)", "basis extent (TL)"])
+                          "basis speed (TL)", "basis speed (BL)", "basis speed (BR)", \
+                          "basis speed (C1)", "basis speed (C2)", "basis speed (S1)", \
+                          "basis speed (S2)", \
+                          "basis orient (TL)", "basis orient (BL)", "basis orient (BR)", \
+                          "basis orient (C1)", "basis orient (C2)", "basis orient (S1)", \
+                          "basis orient (S2)", \
+                          "basis x-location (TL)", "basis x-location (BL)", "basis x-location (BR)", \
+                          "basis x-location (C1)", "basis x-location (C2)", "basis x-location (S1)", \
+                          "basis x-location (S2)", \
+                          "basis y-location (TL)", "basis y-location (BL)", "basis y-location (BR)", \
+                          "basis y-location (C1)", "basis y-location (C2)", "basis y-location (S1)", \
+                          "basis y-location (S2)", \
+                          "basis extent (TL)", "basis extent (BL)", "basis extent (BR)", \
+                          "basis extent (C1)", "basis extent (C2)", "basis extent (S1)", \
+                          "basis extent (S2)"])
+    qoi_names = np.array(["energy", "max vorticity", "min vorticity", \
+                          "local vorticity 0", "local vorticity 1", "local vorticity 2",\
+                          "local vorticity 3", "local vorticity 4", "local vorticity 5", \
+                          "local vorticity 6"])
     #poi_base = np.array([16000, 0, 1, 1, 0, -.75, .75, 1])
-    poi_base = np.array([17000, -1.5, 1e-2, 1, 0, -.75, .75, 1])
-    #poi_base = np.array([17000, -1.5, 1e-2, 1, -.75, .75])
-    poi_ranges = np.array([[16500, 17500], \
-                           [-2, -1],\
-                           [0, 1e-2],\
-                           [.9, 1.1],\
-                           [0, np.pi/2],\
-                           [-.1, .1]+poi_base[5],\
-                           [-.1, .1]+poi_base[6],\
-                           [1, 1.5]
-                           ])
+    poi_base = np.array([17000, -1.5, 1e-2,\
+                         .8, .5, .5, .1, .1, .1, .1, \
+                         0, 3*np.pi/4, np.pi/4, 0, 0, 0, 0,\
+                         -.75, -.75, .75, -.2, .2, .5, .75, \
+                         .75, -.75, -.75, -.2, .2, .5, .75, 
+                         1, 1.5, 1.5, 1, 1, 1, 1])
+    #initialize ranges with pm .25 of base values
+    poi_ranges = np.array([poi_base*.75, poi_base*1.25]).transpose()
+    #Set alternate Reynolds range
+    poi_ranges[0] = np.array([11000, 20000])
+    poi_ranges[1] = np.array([-2, -1])
+    poi_ranges[1] = np.array([0, 1])
+    #Set all axis angles to (0, pi) except those that are ovular by assumption (BL and BR)
+    poi_ranges[10:17] = np.array([[0, np.pi], [np.pi/2, np.pi], [0, np.pi/2], [0, np.pi], [0, np.pi], [0, np.pi], [0, np.pi]])
+    
+    center_locations = np.array([poi_base[17:24], poi_base[24:31]]).transpose()
     # poi_ranges = np.array([[12000, 18000], \
     #                        [-2, 0],\
     #                        [0, 1e2],\
@@ -66,15 +88,7 @@ def main(argv=None):
     #                        [-.2, .2]+poi_base[6],\
     #                        [1,2]])
     poi_normalized = normalize_pois(poi_base, poi_ranges)
-    poi_normalized_ranges = np.array([[0,1],\
-                                      [0,1],\
-                                      [0,1],\
-                                      [0,1],\
-                                      [0,1],\
-                                      [0,1],\
-                                      [0,1],\
-                                      [0,1]]).transpose()
-    qoi_names = np.array(["energy", "max vorticity", "min vorticity"])
+    poi_normalized_ranges = np.array([np.zeros(poi_base.shape), np.ones(poi_base.shape)])
     #======================Load velocity and discretization data=====================
     if logging:
         print("Loading data")
@@ -124,7 +138,8 @@ def main(argv=None):
     #========================Setup Executing function==========================
     eval_fcn = lambda poi_normalized : lid_driven_pod_rom(\
                     poi_normalized, poi_names, qoi_names, poi_ranges, n_modes,\
-                    discretization, velocity_unreduced_1D_compact, integration_times)
+                    discretization, velocity_unreduced_1D_compact, integration_times,
+                    center_mat = center_locations, local_radius = .2)
     
     if logging:
         print("Setting up model")
@@ -149,8 +164,11 @@ def main(argv=None):
     uqOptions.path = save_path
     uqOptions.display = True
     uqOptions.print= True
-    uqOptions.path = data_folder + "sensitivity/s" + str(n_snapshot) + "m" + str(n_modes) + "_l" + str(int(1/l_morris)) + "_"
-
+    uqOptions.path = data_folder + "sensitivity/s" + str(n_snapshot) + "m" + \
+        str(n_modes) + "_l" + str(int(1/l_morris)) + "_tForward" + str(t_forward) +\
+        "_nSamp" + str(n_samp_morris) + "_"
+    if logging>1:
+        print("Base QOI Values: " + str(np.array([model.name_qoi, model.base_qoi].transpose())))
     #Run SA
     print("Running Sensitivity Analysis")
     results=uq.run_uq(model, uqOptions, logging= logging)

@@ -288,6 +288,11 @@ def run_uq(model, options, logging = False):
         sys.stdout=open(options.path + 'Results.txt', 'a+')            #Change output path to results file
         print_results(results,model,options)                     #Print results to file
         sys.stdout=original_stdout                              #Revert normal output path
+        if options.gsa.run_morris:
+            np.savez(options.path + "morris_indices.npz",\
+                     morris_mean_abs = results.gsa.morris_mean_abs,
+                     morris_mean = results.gsa.morris_mean,
+                     morris_std = results.gsa.morris_std)
 
     #Plot Samples
     if options.gsa.run_sobol and options.gsa.run and mpi_rank == 0:
