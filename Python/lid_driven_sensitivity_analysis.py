@@ -2,7 +2,7 @@
 import sys
 import io
 import os
-import UQtoolbox as uq
+import UQLibrary as uq
 import aerofusion.data.array_conversion as arr_conv
 #from aerofusion.rom import incompressible_navier_stokes_rom as incrom
 from aerofusion.rom import incompressible_navier_stokes_rom as incrom
@@ -29,11 +29,23 @@ def main(argv=None):
     
     #===============================Run Options================================
     n_modes = 100
-    n_samp_morris = 40
+    n_samp_morris = 2
     n_snapshot = 150
-    t_forward = 1
+    t_forward = 2
+    
+    qoi_set = "full velocity" #integrated measures
+    
+    run_morris = False
     l_morris = 1/40
     logging = 2
+    
+    run_param_subset = True
+    deriv_method = 'finite'
+    x_delta = 1e-8
+    decomp_method = 'svd'
+    tolerance = 1e-5
+    
+    
     
     #rom_matrices_filename="../../lid_driven_penalty/rom_matrices_s500_m" + str(modes) + ".npz"
     save_path = "../../lid_driven_data/morris_screening_s"+str(n_snapshot) + \
@@ -42,7 +54,7 @@ def main(argv=None):
     weights_file = "weights_hr.mat"
     velocity_file = "re17000_hr.mat"
     #============================Set POIs and QOIs=============================
-    poi_names = np.array(["Re", "boundary exponent mult", "penalty strength", \
+    poi_names = np.array(["Re", "boundary exponent mult", "penalty strength exp", \
                           "basis speed (TL)", "basis speed (BL)", "basis speed (BR)", \
                           "basis speed (C1)", "basis speed (C2)", "basis speed (S1)", \
                           "basis speed (S2)", \
@@ -58,23 +70,32 @@ def main(argv=None):
                           "basis extent (TL)", "basis extent (BL)", "basis extent (BR)", \
                           "basis extent (C1)", "basis extent (C2)", "basis extent (S1)", \
                           "basis extent (S2)"])
-    qoi_names = np.array(["energy", "max vorticity", "min vorticity", \
-                          "local vorticity 0", "local vorticity 1", "local vorticity 2",\
-                          "local vorticity 3", "local vorticity 4", "local vorticity 5", \
-                          "local vorticity 6"])
+    if qoi_set.lower() == "integrated measures":
+        qoi_names = np.array(["energy", "vorticity", \
+                              "local vorticity 0", "local vorticity 1", "local vorticity 2",\
+                              "local vorticity 3", "local vorticity 4", "local vorticity 5", \
+                              "local vorticity 6"])
+    elif qoi_set.lower() == "full velocity":
+        qoi_names = np.array(["full velocity"])
     #poi_base = np.array([16000, 0, 1, 1, 0, -.75, .75, 1])
-    poi_base = np.array([17000, -1.5, 1e-2,\
-                         .8, .5, .5, .1, .1, .1, .1, \
-                         0, 3*np.pi/4, np.pi/4, 0, 0, 0, 0,\
-                         -.75, -.75, .75, -.2, .2, .5, .75, \
-                         .75, -.75, -.75, -.2, .2, .5, .75, 
-                         1, 1.5, 1.5, 1, 1, 1, 1])
+    # poi_base = np.array([20000, -1.5, 0,\
+    #                      1, .5, .5, .1, .1, .1, .1, \
+    #                      0, 3*np.pi/4, np.pi/4, 0, 0, 0, 0,\
+    #                      -.75, -.75, .75, -.2, .2, .5, .75, \
+    #                      .75, -.75, -.75, -.2, .2, .5, .75, 
+    #                      1, 1.5, 1.5, 1, 1, 1, 1])
+    poi_base = np.array([17000, -1.5, -2,\
+                          .95, .5, .5, .1, .1, .1, .1, \
+                          0, 3*np.pi/4, np.pi/4, 0, 0, 0, 0,\
+                          -.75, -.75, .75, -.2, .2, .5, .75, \
+                          .75, -.75, -.75, -.2, .2, .5, .75, 
+                          1, 1.5, 1.5, 1, 1, 1, 1])
     #initialize ranges with pm .25 of base values
     poi_ranges = np.array([poi_base*.75, poi_base*1.25]).transpose()
     #Set alternate Reynolds range
     poi_ranges[0] = np.array([11000, 20000])
-    poi_ranges[1] = np.array([-2, -1])
-    poi_ranges[1] = np.array([0, 1])
+    poi_ranges[1] = np.array([-2, 0])
+    poi_ranges[2] = np.array([-12, 0])
     #Set all axis angles to (0, pi) except those that are ovular by assumption (BL and BR)
     poi_ranges[10:17] = np.array([[0, np.pi], [np.pi/2, np.pi], [0, np.pi/2], [0, np.pi], [0, np.pi], [0, np.pi], [0, np.pi]])
     
@@ -153,22 +174,30 @@ def main(argv=None):
 
     #Set options
     uqOptions = uq.Options()
-    uqOptions.lsa.run=False
-    uqOptions.lsa.run_param_subset = False
-    uqOptions.gsa.run=True
-    uqOptions.gsa.run_morris = True
+    uqOptions.lsa.run=True
+    uqOptions.lsa.run_lsa = False
+    uqOptions.lsa.run_param_subset = run_param_subset
+    uqOptions.lsa.decomp_method= decomp_method
+    uqOptions.lsa.subset_rel_tol = tolerance
+    uqOptions.lsa.x_delta = x_delta
+    uqOptions.lsa.deriv_method = deriv_method
+    
     uqOptions.gsa.run_sobol = False
+    uqOptions.gsa.run=True
+    uqOptions.gsa.run_morris = run_morris
     uqOptions.gsa.n_samp_morris = n_samp_morris
     uqOptions.gsa.l_morris = l_morris
+    
     uqOptions.save = True
     uqOptions.path = save_path
     uqOptions.display = True
+    uqOptions.plot = True
     uqOptions.print= True
     uqOptions.path = data_folder + "sensitivity/s" + str(n_snapshot) + "m" + \
         str(n_modes) + "_l" + str(int(1/l_morris)) + "_tForward" + str(t_forward) +\
         "_nSamp" + str(n_samp_morris) + "_"
-    if logging>1:
-        print("Base QOI Values: " + str(np.array([model.name_qoi, model.base_qoi].transpose())))
+    # if logging>1:
+    #     print("Base QOI Values: " + str(np.array([model.name_qoi, model.base_qoi]).transpose()))
     #Run SA
     print("Running Sensitivity Analysis")
     results=uq.run_uq(model, uqOptions, logging= logging)

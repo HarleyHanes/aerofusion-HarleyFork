@@ -12,10 +12,11 @@ from aerofusion.rom import incompressible_navier_stokes_rom as incrom
 from aerofusion.data import array_conversion as arr_conv
 from aerofusion.numerics import curl_calc as curl_calc
 import gc
+from aerofusion.plot.plot_2D import plot_pcolormesh
 
 def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
          discretization, velocity_unreduced_1D_compact, integration_times,
-         center_mat = np.empty((0)), local_radius = .2):
+         center_mat = np.empty((0)), local_radius = .2, plot = False):
     
     
     #=============================Load Discretization==========================
@@ -64,8 +65,8 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
                 reynolds_number_vec = poi[[i_poi]]
             elif poi_selector[i_poi].lower() == 'boundary exponent mult':
                 boundary_exp_vec = poi[[i_poi]]
-            elif poi_selector[i_poi].lower() == 'penalty strength':
-                pen_strength_vec = poi[[i_poi]]
+            elif poi_selector[i_poi].lower() == 'penalty strength exp':
+                pen_strength_exp_vec = poi[[i_poi]]
             elif poi_selector[i_poi].lower()[0:11] == 'basis speed':
                 basis_speed_mat=np.append(basis_speed_mat, \
                                          poi[i_poi].reshape(1,1),\
@@ -94,8 +95,8 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
                 reynolds_number_vec = poi[:,i_poi]
             elif poi_selector[i_poi].lower() == 'boundary exponent mult':
                 boundary_exp_vec = poi[:, i_poi]
-            elif poi_selector[i_poi].lower() == 'penalty strength':
-                pen_strength_vec = poi[:,i_poi]
+            elif poi_selector[i_poi].lower() == 'penalty strength exp':
+                pen_strength_exp_vec = poi[:,i_poi]
             elif poi_selector[i_poi].lower()[0:11] == 'basis speed':
                 basis_speed_mat=np.append(basis_speed_mat, \
                                          poi[:,i_poi].reshape(n_samp,1),\
@@ -125,7 +126,7 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
         #Unpack POIs
         reynolds_number = reynolds_number_vec[i_samp]
         boundary_exp = 10**(boundary_exp_vec[i_samp])
-        penalty_strength = pen_strength_vec[i_samp]
+        penalty_strength = 10**pen_strength_exp_vec[i_samp]
         basis_speed_vec = basis_speed_mat[i_samp]
         basis_orient_vec = basis_orient_mat[i_samp]
         basis_x_loc_vec = basis_x_loc_mat[i_samp]
@@ -155,7 +156,7 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
                 vel_0_1D_compact = get_artificial_mean(\
                                   basis_speed_vec, basis_orient_vec, basis_x_loc_vec,\
                                   basis_y_loc_vec, basis_extent_vec, Xi, Eta, \
-                                  cell_centroid)
+                                  cell_centroid, plot = plot)
                 (phi, modal_coeff, pod_lambda) = get_pod(velocity_unreduced_1D_compact, \
                                                          "artificial", \
                                                          vel_0_1D_compact,\
@@ -167,7 +168,7 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
             vel_0_1D_compact = get_artificial_mean(\
                               basis_speed_vec, basis_orient_vec, basis_x_loc_vec,\
                               basis_y_loc_vec, basis_extent_vec, Xi, Eta, \
-                              cell_centroid)
+                              cell_centroid, plot= plot)
             (phi, modal_coeff, pod_lambda) = get_pod(velocity_unreduced_1D_compact, \
                                                      "artificial", \
                                                      vel_0_1D_compact,\
@@ -249,14 +250,19 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
         velocity_rom_1D_compact = mean_reduced_velocity + vel_0_1D_compact
         #Transfer to 2D
         velocity_rom_1D = arr_conv.array_compact_to_1D(velocity_rom_1D_compact, n_dim, n_cell)
+        weights_1D = arr_conv.array_compact_to_1D(weights_ND, n_dim, n_cell)
 
         velocity_rom_2D = np.zeros((num_xi, num_eta, n_dim))
+        weights_2D = np.zeros((num_xi, num_eta, n_dim))
         for i_dim in range(2):
               velocity_rom_2D[:,:,i_dim] = arr_conv.array_1D_to_2D(\
                 Xi, Eta, num_xi, num_eta, velocity_rom_1D[:,i_dim])
+              weights_2D[:,:,i_dim] = arr_conv.array_1D_to_2D(\
+                Xi, Eta, num_xi, num_eta, weights_1D[:,i_dim])
+        
         vorticity_2D = curl_calc.curl_2d(-cell_centroid[:,0,0,1], -cell_centroid[0,:,0,0],
                                          velocity_rom_2D[:, :, 0], velocity_rom_2D[:, :,1])
-        del mean_reduced_velocity, velocity_rom_1D_compact,\
+        del mean_reduced_velocity, \
             velocity_rom_1D, L0_calc, LRe_calc, C0_calc, CRe_calc, Q_calc, \
             B_calc, B0_calc
         gc.collect()
@@ -267,20 +273,19 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
             if qoi_selector[i_qoi].lower() == "energy":
                 energy = np.sum(np.abs(modal_coeff))
                 qois_samp = np.append(qois_samp, energy)
-            elif qoi_selector[i_qoi].lower () == "max vorticity":
-                max_vort = np.max(vorticity_2D)
-                qois_samp = np.append(qois_samp, max_vort)
-            elif qoi_selector[i_qoi].lower () == "min vorticity":
-                min_vort = np.min(vorticity_2D)
-                qois_samp = np.append(qois_samp, min_vort)
+            elif qoi_selector[i_qoi].lower () == "vorticity": 
+                vort = np.sum(np.abs(vorticity_2D*weights_2D[:,:,0]))
+                qois_samp = np.append(qois_samp, vort)
             elif qoi_selector[i_qoi].lower()[:15] == "local vorticity":
                 center_number = int(qoi_selector[i_qoi][16:])
                 x_cent = center_mat[center_number, 0]
                 y_cent = center_mat[center_number, 1]
                 vorticity_local_2D = local_response(vorticity_2D, cell_centroid, \
                                                       x_cent, y_cent, local_radius)
-                vort_mag = np.max(np.abs(vorticity_local_2D))
-                qois_samp = np.append(qois_samp, vort_mag)
+                vort = np.max(np.abs(vorticity_local_2D*weights_2D[:,:,0]))
+                qois_samp = np.append(qois_samp, vort)
+            elif qoi_selector[i_qoi].lower() == "full velocity":
+                qois_samp = np.append(qois_samp, velocity_rom_1D_compact)
             else :
                 raise Exception("Unknown qoi: " + str(qoi_selector[i_qoi]))
         if i_samp == 0:

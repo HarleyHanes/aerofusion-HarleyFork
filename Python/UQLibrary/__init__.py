@@ -11,16 +11,14 @@ import sys
 import warnings
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
-from tabulate import tabulate                       #Used for printing tables to terminal
-#import sobol                                        #Used for generating sobol sequences
-import SALib.sample.saltelli as sobol
-import scipy.stats as sct
+from tabulate import tabulate   
 
 import mpi4py.MPI as MPI
 
 #Package Modules
-import lsa
-import gsa
+from . import lsa
+from . import gsa
+from . import examples
 #import seaborne as seaborne
 ###----------------------------------------------------------------------------------------------
 ###-------------------------------------Class Definitions----------------------------------------
@@ -123,24 +121,25 @@ class Model:
         if type(name_qoi)==np.ndarray:
             #Check data type
             if name_qoi.size!= self.n_qoi:
-                raise Exception("Incorrect number of entries in name_qoi")
+                warnings.warn("Incorrect number of entries in name_qoi, using automatic")
+                name_qoi = "auto"
         elif type(name_qoi)==list:
             #Check data type
             if len(name_qoi)!= self.n_qoi:
-                raise Exception("Incorrect number of entries in name_qoi")
-            name_qoi=np.array(name_qoi)
+                warnings.warn("Incorrect number of entries in name_qoi, using automatic")
+                name_qoi = "auto"
+            else: 
+                name_qoi=np.array(name_qoi)
         elif type(name_qoi)==str and name_qoi.lower()!="auto":
             if self.n_qoi!=1:
-                raise Exception("Only one qoi name entered for >1 qois")
+                warnings.warn("Incorrect number of entries in name_qoi, using automatic")
+                name_qoi = "auto"
+            else :
+                name_qoi = np.array(name_qoi)
         else :
             if name_qoi.lower()!= "auto":
                 warnings.warn("Unrecognized name_qoi entry, using automatic values")
             name_qoi= name_qoi_auto
-        if (name_qoi.size !=self.n_qoi) & (name_qoi.size !=0):    #Check names if given match number of QOIs
-            warnings.warn("name_qoi entered but the number of names does not match the number of QOIs. Ignoring names.")
-            name_qoi = name_qoi_auto
-        if name_qoi.size==0:                                 #If not given or incorrect size, number QOIs
-            name_qoi = name_qoi_auto
         self.name_qoi = name_qoi
         del name_qoi
             
@@ -261,7 +260,7 @@ def run_uq(model, options, logging = False):
     if mpi_rank == 0 and options.lsa.run:
         if logging: 
             print("Starting LSA")
-        results.lsa = lsa.run_lsa(model, options.lsa)
+        results.lsa = lsa.run_lsa(model, options.lsa, logging = logging)
         #---------------Broadcast results.lsa to other threads-----------
 
     #Run Global Sensitivity Analysis
@@ -292,13 +291,17 @@ def run_uq(model, options, logging = False):
             np.savez(options.path + "morris_indices.npz",\
                      morris_mean_abs = results.gsa.morris_mean_abs,
                      morris_mean = results.gsa.morris_mean,
-                     morris_std = results.gsa.morris_std)
+                     morris_std = results.gsa.morris_std,
+                     base_response = model.base_qoi)
 
     #Plot Samples
-    if options.gsa.run_sobol and options.gsa.run and mpi_rank == 0:
+    if options.plot:
         if logging: 
             print("Plotting Results")
-        plot_gsa(model, results.gsa.samp_d, results.gsa.f_d, options)
+        if options.lsa.run_param_subset and mpi_rank == 0:
+            plot_lsa(model, results.lsa.ident_values, options)
+        if options.gsa.run_sobol and options.gsa.run  and mpi_rank == 0:
+            plot_gsa(model, results.gsa.samp_d, results.gsa.f_d, options)
 
     return results
 
@@ -318,25 +321,34 @@ def print_results(results,model,options):
     """
     # Print Results
     #Results Header
-    print('Sensitivity results for nSampSobol=' + str(options.gsa.n_samp_sobol))
+    #print('Sensitivity results for nSampSobol=' + str(options.gsa.n_samp_sobol))
     #Local Sensitivity Analysis
     if options.lsa.run:
-        print('\n Base POI Values')
-        print(tabulate([model.base_poi], headers=model.name_poi))
-        print('\n Base QOI Values')
-        print(tabulate([model.base_qoi], headers=model.name_qoi))
-        print('\n Sensitivity Indices')
-        print(tabulate(np.concatenate((model.name_poi.reshape(model.n_poi,1),np.transpose(results.lsa.jac)),1),
-              headers= np.append("",model.name_qoi)))
-        print('\n Relative Sensitivity Indices')
-        print(tabulate(np.concatenate((model.name_poi.reshape(model.n_poi,1),np.transpose(results.lsa.rsi)),1),
-              headers= np.append("",model.name_qoi)))
-        #print("Fisher Matrix: " + str(results.lsa.fisher))
+        if options.lsa.run_lsa:
+            print('Local Sensitivity Analysis using ' + options.lsa.deriv_method \
+                  + ' approximation and h=' + str(options.lsa.x_delta))
+            print('Base POI Values')
+            print(tabulate([model.base_poi], headers=model.name_poi))
+            print('\n Base QOI Values')
+            print(tabulate([model.base_qoi], headers=model.name_qoi))
+            print('\n Sensitivity Indices')
+            print(tabulate(np.concatenate((model.name_poi.reshape(model.n_poi,1),np.transpose(results.lsa.jac)),1),
+                  headers= np.append("",model.name_qoi)))
+            print('\n Relative Sensitivity Indices')
+            print(tabulate(np.concatenate((model.name_poi.reshape(model.n_poi,1),np.transpose(results.lsa.rsi)),1),
+                  headers= np.append("",model.name_qoi)))
+            #print("Fisher Matrix: " + str(results.lsa.fisher))
         #Active Subsapce Analysis
-        print('\n Active Supspace')
-        print(results.lsa.active_set)
-        print('\n Inactive Supspace')
-        print(results.lsa.inactive_set)
+        if options.lsa.run_param_subset:
+            print('\nParameter Subset selection using ' + options.lsa.decomp_method +\
+                  ' decomposition and tolerance ' + str(options.lsa.subset_rel_tol))
+            print('Active Supspace')
+            print(results.lsa.active_set)
+            print('\nInactive Supspace')
+            print(results.lsa.inactive_set)
+            print('\nIdentifiability Values')
+            for i_sim in range(len(results.lsa.ident_values)):
+                print('Pass ' + str(i_sim+1) + ': ' + str(results.lsa.ident_values[i_sim]))
     if options.gsa.run: 
         if options.gsa.run_sobol:
             if model.n_qoi==1:
@@ -352,13 +364,13 @@ def print_results(results,model,options):
     
         if options.gsa.run_morris:
             if model.n_qoi==1:
-                print('\n Morris Screening Results for' + model.name_qoi[0])
+                print('\n Morris Screening Results for ' + model.name_qoi[0])
                 print(tabulate(np.concatenate((model.name_poi.reshape(model.n_poi, 1), results.gsa.morris_mean_abs.reshape(model.n_poi, 1), \
                                                results.gsa.morris_std.reshape(model.n_poi, 1)), 1),
                     headers=["", "mu_star", "sigma"]))
             else:
                 for i_qoi in range(model.n_qoi):
-                    print('\n Morris Screening Results for' + model.name_qoi[i_qoi])
+                    print('\n Morris Screening Results for ' + model.name_qoi[i_qoi])
                     print(tabulate(np.concatenate(
                         (model.name_poi.reshape(model.n_poi, 1), results.gsa.morris_mean_abs[:,[i_qoi]].reshape(model.n_poi, 1), \
                      results.gsa.morris_std[:,[i_qoi]].reshape(model.n_poi, 1)), 1),
@@ -367,14 +379,30 @@ def print_results(results,model,options):
 ###----------------------------------------------------------------------------------------------
 ###-------------------------------------Support Functions----------------------------------------
 ###----------------------------------------------------------------------------------------------
+def plot_lsa(model, ident_values, options):
+    """Plots Identifiability singular values results from lsa module.
+    
+    Parameters
+    ----------
+    model : Model
+        Object of class Model holding run information.
+    sample_mat: np.ndarray
+        n_samp x n_poi array holding each parameter sample
+    eval_mat : np.ndarray
+        n_samp x n_qoi array holding each function evaluation
+    options : Options
+        Object of class Options holding run settings.
+    """
+    fig = plt.figure()
+    for i_sim in range(len(ident_values)):
+        plt.semilogy(ident_values[i_sim], label = 'Iteration %i' % i_sim)
+    fig.tight_layout()
+    plt.xlabel('Identifiability Value ('+ options.lsa.decomp_method + ')')
+    plt.legend()
+    
+    plt.savefig(options.path+"identifiability_values.png")
+    
 
-
-##--------------------------------------GetSobol------------------------------------------------------
-# GSA Component Functions
-
-
-#
-#
 def plot_gsa(model, sample_mat, eval_mat, options):
     """Plots Sobol Sampling results from gsa module.
     
