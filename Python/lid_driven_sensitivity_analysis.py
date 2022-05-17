@@ -22,28 +22,108 @@ import mpi4py.MPI as MPI
 import gc
 
 def main(argv=None):
+        
     mpi_comm = MPI.COMM_WORLD
     mpi_rank = mpi_comm.Get_rank()
     mpi_size = mpi_comm.Get_size()
     print("Hello from thread " + str(mpi_rank) + ".")
     
     #===============================Run Options================================
-    n_modes = 100
-    n_samp_morris = 2
-    n_snapshot = 150
-    t_forward = 2
+    #Fixed arguments
+    n_samp_morris = 40
     
-    qoi_set = "full velocity" #integrated measures
-    
-    run_morris = False
     l_morris = 1/40
-    logging = 2
+    logging = 1
     
-    run_param_subset = True
-    deriv_method = 'finite'
-    x_delta = 1e-8
     decomp_method = 'svd'
-    tolerance = 1e-5
+    #Parse Arguments 
+    if "x_delta" in sys.argv:
+        index = sys.argv.index("x_delta")
+        x_delta = float(sys.argv[index+1])
+        print("x_delta: " + str(x_delta))
+    else:
+        x_delta = 1e-6
+        
+    if "deriv_method" in sys.argv:
+        index = sys.argv.index("deriv_method")
+        deriv_method= str(sys.argv[index+1])
+        print("deriv_method: " + str(deriv_method))
+    else:
+        deriv_method = 'finite'
+        
+    if "algorithm" in sys.argv:
+        index = sys.argv.index("algorithm")
+        algorithm = str(sys.argv[index+1])
+        print("algorithm: " + str(algorithm))
+        
+    else:
+        algorithm =  'rrqr'     
+        
+    if "rel_tol" in sys.argv:
+        index = sys.argv.index("rel_tol")
+        tolerance = float(sys.argv[index+1])
+        print("rel_tol: "+ str(tolerance))
+    else:
+        tolerance = 1e-7
+        
+    if "n_modes" in sys.argv:
+        index = sys.argv.index("n_modes")
+        n_modes = int(sys.argv[index+1])
+        print("n_modes: " + str(n_modes))
+    else:
+        n_modes = 100
+        
+    if "n_snapshot" in sys.argv:
+        index = sys.argv.index("n_snapshot")
+        n_snapshot = int(sys.argv[index+1])
+        print("n_snapshot: " + str(n_snapshot))
+    else:
+        n_snapshot= 150
+        
+    if "t_forward" in sys.argv:
+        index = sys.argv.index("t_forward")
+        t_forward = float(sys.argv[index+1])
+        print("t_forward: " + str(t_forward))
+    else:
+        t_forward = 1
+        
+    if "run_morris" in sys.argv:
+        run_morris = True
+    else:
+        run_morris = False
+        
+    if "run_pss" in sys.argv:
+        run_pss = True
+    else:
+        run_pss = False
+    
+    if "test_reduction" in sys.argv:
+        test_reduction = True
+    else:
+        test_reduction = False
+    
+    if "reduction_nsamp" in sys.argv:
+        index = sys.argv.index("reduction_nsamp")
+        reduction_nsamp = int(sys.argv[index+1])
+        print("reduction_nsamp: " + str(reduction_nsamp))
+    else:
+        reduction_nsamp = 200  #integrated measures
+        
+    if "inactive_pois" in sys.argv:
+        index = sys.argv.index("inactive_pois")
+        inactive_pois = np.array(sys.argv[index+1:])
+        print("inactive_pois: " + str(inactive_pois))
+    else:
+        inactive_pois = "null" 
+        
+        
+    if "qoi_set" in sys.argv:
+        index = sys.argv.index("qoi_set")
+        qoi_set = str(sys.argv[index+1])
+        print("qoi_set: " + str(qoi_set))
+    else:
+        qoi_set = "full velocity"  #integrated measures
+        
     
     
     
@@ -171,14 +251,14 @@ def main(argv=None):
                       name_poi = poi_names,
                       name_qoi = qoi_names
                       )
-
     #Set options
     uqOptions = uq.Options()
     uqOptions.lsa.run=True
     uqOptions.lsa.run_lsa = False
-    uqOptions.lsa.run_param_subset = run_param_subset
-    uqOptions.lsa.decomp_method= decomp_method
-    uqOptions.lsa.subset_rel_tol = tolerance
+    uqOptions.lsa.run_pss = run_pss
+    uqOptions.lsa.pss_decomp_method= decomp_method
+    uqOptions.lsa.pss_rel_tol = tolerance
+    uqOptions.lsa.pss_algorithm = algorithm
     uqOptions.lsa.x_delta = x_delta
     uqOptions.lsa.deriv_method = deriv_method
     
@@ -189,18 +269,42 @@ def main(argv=None):
     uqOptions.gsa.l_morris = l_morris
     
     uqOptions.save = True
-    uqOptions.path = save_path
     uqOptions.display = True
     uqOptions.plot = True
-    uqOptions.print= True
-    uqOptions.path = data_folder + "sensitivity/s" + str(n_snapshot) + "m" + \
-        str(n_modes) + "_l" + str(int(1/l_morris)) + "_tForward" + str(t_forward) +\
-        "_nSamp" + str(n_samp_morris) + "_"
+    if run_morris and run_pss:
+        uqOptions.path = data_folder + "sensitivity/morris_ident_s" + str(n_snapshot) + "m" + \
+            str(n_modes) + "_l" + str(int(1/l_morris)) + "_tForward" + str(t_forward) +\
+            "_nSamp" + str(n_samp_morris) + "_tol" + str(int(np.log10(tolerance)*1000)/1000) + "_"
+    elif run_morris:
+        uqOptions.path = data_folder + "sensitivity/morris_s" + str(n_snapshot) + "m" + \
+            str(n_modes) + "_l" + str(int(1/l_morris)) + "_tForward" + str(t_forward) +\
+            "_nSamp" + str(n_samp_morris) + "_"
+    elif run_pss:
+        uqOptions.path = data_folder + "sensitivity/ident_s" + str(n_snapshot) + "m" + \
+            str(n_modes) + "_tForward" + str(t_forward) + "_tol" + str(int(np.log10(tolerance)*1000)/1000) + "_"
+    elif test_reduction:
+        uqOptions.path = data_folder + "sensitivity/"+str(algorithm).lower()+\
+            "_plots/reduction_s" + str(n_snapshot) + "m" + str(n_modes) + "_tForward"\
+            + str(t_forward) + "_tol" +  str(int(np.log10(tolerance)*1000)/1000)\
+            + "_nsamp" + str(reduction_nsamp) +  "_"
+        
     # if logging>1:
     #     print("Base QOI Values: " + str(np.array([model.name_qoi, model.base_qoi]).transpose()))
     #Run SA
-    print("Running Sensitivity Analysis")
-    results=uq.run_uq(model, uqOptions, logging= logging)
+    if run_morris or run_pss:
+        print("Running Sensitivity Analysis")
+        results=uq.run_uq(model, uqOptions, logging= logging)
+    if test_reduction:
+        if run_pss:
+            uq.lsa.test_model_reduction(model, results.lsa.inactive_set,\
+                                        uqOptions.path, tolerance, \
+                                        logging = logging)
+        elif np.all(inactive_pois == "null"):
+            raise Exception("PSS reduction test selected but not inactives set provided.")
+        else:
+            uq.lsa.test_model_reduction(model, inactive_pois, reduction_nsamp, \
+                                        uqOptions.path, tolerance, \
+                                        logging = logging)
     
 '''
     #Reshape Sensitivities

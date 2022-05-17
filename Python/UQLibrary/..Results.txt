@@ -278,3 +278,234 @@ Inactive Supspace
 Identifiability Values
 Pass 1: [6.20608503 1.18379928 0.13679196]
 Pass 2: [5.21851307 1.09360507]
+
+Parameter Subset selection using svd decomposition and tolerance 0.023
+Active Supspace
+['alpha1' 'alpha111']
+
+Inactive Supspace
+['alpha11']
+
+Reduction Order
+['null']
+
+Identifiability Values
+Pass 1: 6.206085034566448
+Pass 2: 1.18379928006179
+Pass 3: 0.13679195677741474
+
+Parameter Subset selection using svd decomposition and tolerance 0.023
+Active Supspace
+['alpha1' 'alpha111']
+
+Inactive Supspace
+['alpha11']
+
+Reduction Order
+['null']
+
+Identifiability Values: [6.20608503 1.18379928 0.13679196]
+
+Parameter Subset selection using svd decomposition and tolerance 0.023
+Active Supspace
+['alpha1' 'alpha111']
+
+Inactive Supspace
+['alpha11']
+
+Reduction Order
+['null']
+
+Identifiability Values: [6.20608503 1.18379928 0.13679196]
+
+Parameter Subset selection using svd decomposition,rrqr algorithm,                    and tolerance 0.023
+Active Supspace
+['alpha1' 'alpha111']
+
+Inactive Supspace
+['alpha11']
+
+Reduction Order
+['null']
+
+Identifiability Values: [6.20608503 1.18379928 0.13679196]
+
+Parameter Subset selection using svd decomposition,rrqr algorithm and tolerance 0.023
+Active Supspace
+['alpha1' 'alpha111']
+
+Inactive Supspace
+['alpha11']
+
+Reduction Order
+['null']
+
+Identifiability Values: [6.20608503 1.18379928 0.13679196]
+
+Parameter Subset selection using svd decomposition, rrqr algorithm and tolerance 0.023
+Active Supspace
+['alpha1' 'alpha111']
+
+Inactive Supspace
+['alpha11' 'fake parameter']
+
+Reduction Order
+['null']
+
+Identifiability Values: [6.20608503 1.18379928 0.13679196 0.        ]
+
+Parameter Subset selection using svd decomposition, rrqr algorithm and tolerance 0.023
+Active Supspace
+['alpha1' 'alpha11']
+
+Inactive Supspace
+['alpha111' 'fake parameter']
+
+Reduction Order
+['null']
+
+Identifiability Values: [6.20608503 1.18379928 0.13679196 0.        ]
+
+Parameter Subset selection using svd decomposition, rrqr algorithm and tolerance 0.023
+Active Supspace
+['alpha1' 'alpha11']
+
+Inactive Supspace
+['alpha111' 'fake parameter']
+
+Reduction Order
+['null']
+
+Identifiability Values: [6.20608503 1.18379928 0.13679196 0.        ]
+
+Parameter Subset selection using svd decomposition, rrqr algorithm and tolerance 0.023
+Active Supspace
+['alpha1' 'alpha11']
+
+Inactive Supspace
+['alpha111' 'fake parameter']
+
+Reduction Order
+['null']
+
+Identifiability Values: [6.20608503 1.18379928 0.13679196 0.        ]
+
+Parameter Subset selection using svd decomposition, rrqr algorithm and tolerance 0.023
+Active Supspace
+['alpha1' 'alpha111']
+
+Inactive Supspace
+['alpha11' 'fake parameter']
+
+Reduction Order
+['null']
+
+Identifiability Values: [6.20608503 1.18379928 0.13679196 0.        ]
+
+Parameter Subset selection using svd decomposition, rrqr algorithm and tolerance 1e-08
+Active Supspace
+['alpha1' 'alpha11' 'alpha111']
+
+Inactive Supspace
+['fake parameter']
+
+Reduction Order
+['null']
+
+Identifiability Values: [1.80312144e-01 1.55180831e-03 1.47113745e-05 0.00000000e+00]
+
+Parameter Subset selection using svd decomposition, rrqr algorithm and tolerance 1e-08
+Active Supspace
+['alpha1' 'alpha11' 'alpha111']
+
+Inactive Supspace
+['fake parameter']
+
+Reduction Order
+['null']
+
+Identifiability Values: [1.12648327e-02 6.05629845e-06 3.59637021e-09 0.00000000e+00]
+
+Parameter Subset selection using svd decomposition, rrqr algorithm and tolerance 1e-08
+Active Supspace
+['alpha1' 'alpha11' 'alpha111']
+
+Inactive Supspace
+['fake parameter']
+
+Reduction Order
+['null']
+
+Identifiability Values: [3.25447118 0.45982086 0.04614951 0.        ]
+
+Parameter Subset selection using svd decomposition, rrqr algorithm and tolerance 1e-06
+Active Supspace
+['alpha1' 'alpha11' 'alpha111']
+
+Inactive Supspace
+['fake parameter']
+
+Reduction Order
+['null']
+
+Identifiability Values: [1.14540986 0.06258532 0.00342265 0.        ]
+
+Parameter Subset selection using svd decomposition, rrqr algorithm and tolerance 1e-06
+Active Supspace
+['alpha1' 'alpha11']
+
+Inactive Supspace
+['alpha111' 'fake parameter']
+
+Reduction Order
+['null']
+
+Identifiability Values: [1.12648327e-02 6.05629845e-06 3.59637021e-09 0.00000000e+00]
+
+Parameter Subset selection using svd decomposition, rrqr algorithm and tolerance 1e-06
+Active Supspace
+['alpha1' 'alpha11']
+
+Inactive Supspace
+['alpha111' 'fake parameter']
+
+Reduction Order
+['null']
+
+Identifiability Values: [1.12648327e-02 6.05629845e-06 3.59637021e-09 0.00000000e+00]
+
+Parameter Subset selection using svd decomposition, rrqr algorithm and tolerance 1e-06
+Active Supspace
+['alpha1' 'alpha11' 'alpha111']
+
+Inactive Supspace
+['fake parameter']
+
+Reduction Order
+['null']
+
+Identifiability Values: [4.50604303e-02 9.69059142e-05 2.30149872e-07 0.00000000e+00]
+
+Parameter Subset selection using svd decomposition, rrqr algorithm and tolerance 1e-06
+Active Supspace
+['alpha1' 'alpha11' 'alpha111']
+
+Inactive Supspace
+['fake parameter']
+
+Reduction Order
+['null']
+
+Identifiability Values: [2.88382323e-02 3.96913369e-05 6.03353500e-08 0.00000000e+00]
+
+Parameter Subset selection using svd decomposition, rrqr algorithm and tolerance 1e-06
+Active Supspace
+['alpha1' 'alpha11']
+
+Inactive Supspace
+['alpha111' 'fake parameter']
+
+Reduction Order
+['null']
+
+Identifiability Values: [1.12648327e-02 6.05629845e-06 3.59637021e-09 0.00000000e+00]

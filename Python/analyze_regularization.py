@@ -1,7 +1,6 @@
 import sys
 import io
 import os
-import UQtoolbox as uq
 import aerofusion.data.array_conversion as arr_conv
 from aerofusion.rom import incompressible_navier_stokes_rom as incrom
 import numpy as np
@@ -11,28 +10,56 @@ import libconf
 from aerofusion.plot.plot_2D import plot_contour
 from aerofusion.plot.plot_2D import plot_pcolormesh
 import matplotlib.pyplot as plt
+from aerofusion.numerics import derivatives_curvilinear_grid as curvder
 import scipy.io as mio
 from compute_vorticity import Vorticity_2D
 
 def main(argv=None):
     # Run Settings
-    penalty = 10.0 ** np.array([-15, -2, 2])
-    alpha = np.array([1, .5, .1, .01])
-    tmax= 100
-    snapshots=500
+    penalty = 10.0 ** np.array([-2, 2])
+    alpha = np.array([1, .01])
+    tmax= 500
+    snapshots = 500
     modes = 100
-    fig_size=(20,16)
+    fig_size=(20,8)#(20,16)
     res = "high"
     method = "art"
-    plot_data = "vorticity"
+    fontsize = 16
+    plot_data = "vorticity reduced"
     plot_style =  "heat"   #stream heat
     
     #Define file locations
     if res.lower() == "high":
         data_folder = "../../lid_driven_data/"
+        #pod_filename = "pod_Re20000hr_"+ method+ "_s500m200.npz"
         pod_filename = "pod_Re17000hr_"+ method+ "_s500m100.npz"
         plot_folder = "../../lid_driven_snapshots/"+ method+ "_u0/"
         rom_filename = "rom_Re17000hr_"+ method+ "_s500m"+ str(modes) + ".npz"
+        #rom_filename = "rom_Re20000hr_"+ method+ "_s500m"+ str(modes) + ".npz"
+        weights_file = "weights_hr.mat"
+        
+        # num_xi=256
+        # num_eta = 256
+        # num_zeta = 1
+        # n_dim = 2
+        # mat2 = mio.loadmat(data_folder + weights_file)
+        # weights = np.ndarray.flatten(mat2['W'])
+        # weights_ND = np.repeat(weights.reshape(weights.size,1), 2, axis=1).transpose().flatten()
+        
+        # mat2=mio.loadmat(data_folder + "Xi_hr.mat")
+        # Xi=np.ndarray.flatten(mat2['Xi'])
+        
+        # mat2=mio.loadmat(data_folder + "Eta_hr.mat")
+        # Eta=np.ndarray.flatten(mat2['Eta'])
+        
+        # del mat2
+        
+        # centroid_file=np.load(data_folder + "cell_center_high_res.npz")
+        # cell_centroid=np.zeros((num_xi,num_eta,num_zeta,n_dim))
+        # cell_centroid[:,:,0,0] = centroid_file['cell_center_x']
+        # cell_centroid[:,:,0,1] = centroid_file['cell_center_y']
+        # n_cell = num_xi*num_eta*num_zeta
+        # Zeta=np.zeros((Xi.shape[0],),dtype='int')
     elif res.lower() == "low":
         data_folder = "../../lid_driven_data/"
         pod_filename="pod_Re20000lr_"+ method+ "_s500m100.npz"
@@ -43,20 +70,13 @@ def main(argv=None):
     integration_times = np.arange(.1,tmax+.1,.1,)
     
     #--------------------------------------- Load Data
+            
     pod_data = np.load(data_folder + pod_filename)
     vel_0           = pod_data['velocity_mean']
     phi             = pod_data['phi'][:,0:modes]
     modal_coeff     = pod_data['modal_coeff'][0:modes]
-    
-    
-    matrices = np.load(data_folder + rom_filename)
-    L0_calc  = matrices['L0_calc']
-    LRe_calc = matrices['LRe_calc']
-    C0_calc  = matrices['C0_calc']
-    CRe_calc = matrices['CRe_calc']
-    Q_calc   = matrices['Q_calc']
-    B_calc   = matrices['B_calc']
-    B0_calc  = matrices['B0_calc']
+  
+       
     
     if res.lower() == "low":
         mat2=mio.loadmat(data_folder + "w_LowRes.mat")
@@ -122,22 +142,71 @@ def main(argv=None):
     #Upsample for 2D
     weights_ND = np.zeros([num_cell*num_dim])
     
-    #Seperate velocity components
-    vel_0_1D = np.reshape(vel_0, (num_cell, num_dim), order= 'F')
+    # #Seperate velocity components
+    # vel_0_1D = np.reshape(vel_0, (num_cell, num_dim), order= 'F')
     
-    vel_0_2D = np.zeros([num_xi, num_eta, num_dim])
+    # vel_0_2D = np.zeros([num_xi, num_eta, num_dim])
+    # for i_dim in range(num_dim):
+    #   weights_ND[i_dim*num_cell : (i_dim+1)*num_cell] = weights
+    #   vel_0_2D[:,:,i_dim] = arr_conv.array_1D_to_2D(\
+    #       Xi, Eta, num_xi, num_eta, vel_0_1D[:,i_dim])
+  
+    
+    #Convert 1D mean reduction to 3D for ROM matrix calculations
+    vel_0_1D = arr_conv.array_compact_to_1D(vel_0, num_dim, num_cell)
+    vel_0_3D = np.empty(((num_xi, num_eta, num_zeta, num_dim)))
     for i_dim in range(num_dim):
-      weights_ND[i_dim*num_cell : (i_dim+1)*num_cell] = weights
-      vel_0_2D[:,:,i_dim] = arr_conv.array_1D_to_2D(\
+        vel_0_3D[:,:,0,i_dim] = arr_conv.array_1D_to_2D(\
           Xi, Eta, num_xi, num_eta, vel_0_1D[:,i_dim])
+    vel_0_2D = vel_0_3D[:,:,0,:]
           
     # if method.lower == "mean":
     #     vel_0_2D = np.rot90(vel_0_2D, k=2, axes=(0,1))
     
     # Loop Through Penalty Cases
+    
+    
+    matrices = np.load(data_folder + rom_filename)
+    L0_calc  = matrices['L0_calc']
+    LRe_calc = matrices['LRe_calc']
+    C0_calc  = matrices['C0_calc']
+    CRe_calc = matrices['CRe_calc']
+    Q_calc   = matrices['Q_calc']
+    B_calc   = matrices['B_calc']
+    B0_calc  = matrices['B0_calc']
+
+    
+    # jacobian = curvder.jacobian_of_grid_2d2(\
+    #     Xi,
+    #     Eta,
+    #     zeta,
+    #     cell_centroid,
+    #     2)
+    #     #options.rom.jacobian.order_derivatives_x,
+    #     #options.rom.jacobian.order_derivatives_y,
+    #     #options.rom.jacobian.order_derivatives_z)
+    # (L0_calc, LRe_calc, C0_calc, CRe_calc, Q_calc) = \
+    #     incrom.pod_rom_matrices_2d(\
+    #       Xi,
+    #       Eta,
+    #       zeta,
+    #       cell_centroid,
+    #       num_cell,
+    #       phi,
+    #       weights_ND,
+    #       vel_0_3D,
+    #       jacobian,
+    #       6)
+    # np.savez(rom_filename,
+    #          L0_calc  = L0_calc,
+    #          LRe_calc = LRe_calc,
+    #          C0_calc  = C0_calc,
+    #          CRe_calc = CRe_calc,
+    #          Q_calc   = Q_calc)    
     for iPenalty in range(len(penalty)):
         # Make Figure
         fig = plt.figure(figsize = fig_size)
+        plt.rc('font', size= fontsize) 
         # Loop Through Boundary Cases
         print("Penalty: " + str(penalty[iPenalty]))
         for iAlpha in range(len(alpha)):
@@ -195,11 +264,14 @@ def main(argv=None):
                 data = vel_0_2D[:,:,1] + vel_rom_2D[:,:,1]
             #------------------------Plot Data ----------------------------
             # Make Subplot
-            if iPenalty == 0:
-                ax = fig.add_subplot(int(200+np.ceil(len(alpha)/2)*10+iAlpha+1))
+            #if iPenalty == 0:
+            if iAlpha == 0:
+                ax = fig.add_subplot(121)
+                #ax = fig.add_subplot(int(200+np.ceil(len(alpha)/2)*10+iAlpha+1))
             else: 
-                ax = fig.add_subplot(int(200+np.ceil(len(alpha)/2)*10+iAlpha+1),\
-                                    sharex=ax, sharey= ax)
+                ax = fig.add_subplot(122)
+                #ax = fig.add_subplot(int(200+np.ceil(len(alpha)/2)*10+iAlpha+1),\
+                                    #sharex=ax, sharey= ax)
             if plot_style.lower() == "heat":
                 im = ax.pcolormesh(\
                              Xi_mesh,
@@ -208,6 +280,8 @@ def main(argv=None):
                              cmap = "jet",
                              vmin= -np.max(np.abs(data)),
                              vmax= np.max(np.abs(data)))
+                
+                ax.set_xlabel("x")
                 if iAlpha == 1 or iAlpha ==3:
                     fig.colorbar(im, label = plot_data)
                 else: 

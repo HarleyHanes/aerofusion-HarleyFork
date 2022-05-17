@@ -43,9 +43,10 @@ def main(argv=None):
     penalty=10.0**4
     modes = 100      #number of modes to use (starting with 1)
     
-    rom_matrices_filename="rom_Re17000hr_"+method+"_s500m"+ str(modes) + ".npz"
+    rom_matrices_filename="rom_Re17000hr_" + method + "_s500m"+ str(modes) + ".npz"
     data_folder = "../../lid_driven_data/"
-    pod_filename="pod_Re17000hr_"+method+"_s500m100.npz"
+    plot_folder = data_folder + "boundary_penalty_sim/"
+    pod_filename="pod_Re17000hr_" + method + "_s500m100.npz"
     data_filename = "re17000_hr.mat"
     res = "high"
     
@@ -112,10 +113,8 @@ def main(argv=None):
     base_vec = np.linspace(-1,1,num = num_xi)
     zeta=np.zeros((Xi.shape[0],),dtype='int')
     
-    Xi_mesh=Xi.reshape((num_eta, num_xi))
-    Eta_mesh=Eta.reshape((num_eta, num_xi))
-    Xi_mesh = (Xi_mesh- (num_xi-1)/2)/(num_xi/2)
-    Eta_mesh = (Eta_mesh- (num_eta-1)/2)/(num_eta/2)
+    Xi_mesh = cell_centroid[:,:,0,0]
+    Eta_mesh = cell_centroid[:,:,0,1]
     
     #Compute Boundary 
     boundary_vec=boundaryFcn(Xi_mesh[0,:])
@@ -288,7 +287,7 @@ def main(argv=None):
                       label=r'$\tau=10^{' + str(int(np.log10(penalty[iPenalty]))) + '}$')
         plt.legend(loc='upper left')
         plt.ylabel('ROM Kinetic Energy')
-        plt.savefig(data_folder + 'ROMenergy_m' +str(modes), bbox_inches='tight')
+        plt.savefig(plot_folder+ 'ROMenergy_m' +str(modes), bbox_inches='tight')
         plt.show()
         
         # for iPenalty in range(len(penalty_exp)-1):        
@@ -296,7 +295,7 @@ def main(argv=None):
         #              label=r'$\tau=10^{' + str(penalty_exp[iPenalty+1]) + '}$')
         # plt.ylabel('Energy Increase Relative to no Penalty')
         # plt.legend(loc='upper left')
-        # plt.savefig(data_folder + 'ROMenergyRelative')
+        # plt.savefig(plot_folder+ 'ROMenergyRelative')
         # plt.show()
         
         
@@ -306,7 +305,7 @@ def main(argv=None):
                       label=r'$\tau=10^{' + str(int(np.log10(penalty[iPenalty]))) + '}$')
         plt.legend(loc='upper left')
         plt.ylabel('ROM Error')
-        plt.savefig(data_folder + 'ROMerror_m' +str(modes), bbox_inches='tight')
+        plt.savefig(plot_folder+ 'ROMerror_m' +str(modes), bbox_inches='tight')
         plt.show()
         
         #Plot Rom Error
@@ -315,7 +314,7 @@ def main(argv=None):
                       label=r'$\tau=10^{' + str(int(np.log10(penalty[iPenalty]))) + '}$')
         plt.legend(loc='upper left')
         plt.ylabel('Relative ROM Error')
-        plt.savefig(data_folder + 'ROMerrorRelative_m' +str(modes), bbox_inches='tight')
+        plt.savefig(plot_folder+ 'ROMerrorRelative_m' +str(modes), bbox_inches='tight')
         plt.show()
         
         
@@ -362,118 +361,176 @@ def main(argv=None):
                 Xi, Eta, num_xi, num_eta, vel_rom_1D[:,i_dim,i_time])
               vel_pod_2D[:,:,i_dim,i_time] = arr_conv.array_1D_to_2D(\
                 Xi, Eta, num_xi, num_eta, vel_pod_1D[:,i_dim,i_time])
+      #Compute vorticity
+        velocity_pred_2D = np.empty((num_xi, num_eta,num_dim, num_time))
+        for i_time in range(num_time):
+            velocity_pred_2D[:,:,:,i_time] = vel_rom_2D[:,:,:,i_time] + \
+                                            vel_0_2D
+        vort = np.empty((num_xi,num_eta,num_time))
+        for i_time in range(num_time):
+            vort[:,:,i_time]=curl_calc.curl_2d(-cell_centroid[:,0,0,1], -cell_centroid[0,:,0,0],
+                                           velocity_pred_2D[:, :, 0, i_time], velocity_pred_2D[:, :,1, i_time])
+          
             
+    #Rom error u
         plot_pcolormesh(\
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,0,1]-(vel_0_2D[:,:,0]+vel_rom_2D[:,:,0,0]),
-          data_folder + 'u_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t1.png',
+          plot_folder+ 'u_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t1.png',
           "auto",
           "auto",
-          "auto")
+          "auto",
+          colorbar_label='u error')
     
         plot_pcolormesh(\
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,0,100]-(vel_0_2D[:,:,0]+vel_rom_2D[:,:,0,99]),
-          data_folder + 'u_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t100_m' + str(modes) + '.png',
+          plot_folder+ 'u_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t100_m' + str(modes) + '.png',
           "auto",
           "auto",
-          "auto")
+          "auto",
+          colorbar_label='u error')
             
             
         plot_pcolormesh(\
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,0,-1]-(vel_0_2D[:,:,0]+vel_rom_2D[:,:,0,-1]),
-          data_folder + 'u_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t499_m' + str(modes) + '.png',
+          plot_folder+ 'u_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t499_m' + str(modes) + '.png',
           "auto",
           "auto",
-          "auto")
-    
+          "auto",
+          colorbar_label='u error')
+    #Pod error u
         plot_pcolormesh(\
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,0,1]-(vel_0_2D[:,:,0]+vel_pod_2D[:,:,0,1]),
-          data_folder + 'u_vel_pod_error_t1_m' + str(modes) + '.png',
+          plot_folder+ 'u_vel_pod_error_t1_m' + str(modes) + '.png',
           "auto",
           "auto",
-          "auto")
+          "auto",
+          colorbar_label='u error')
     
         plot_pcolormesh(\
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,0,100]-(vel_0_2D[:,:,0]+vel_pod_2D[:,:,0,100]),
-          data_folder + 'u_vel_pod_error_t100_m' + str(modes) + '.png',
+          plot_folder+ 'u_vel_pod_error_t100_m' + str(modes) + '.png',
           "auto",
           "auto",
-          "auto")
+          "auto",
+          colorbar_label='u error')
             
             
         plot_pcolormesh(\
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,0,-1]-(vel_0_2D[:,:,0]+vel_pod_2D[:,:,0,-1]),
-          data_folder + 'u_vel_pod_error_t499_m' + str(modes) + '.png',
+          plot_folder+ 'u_vel_pod_error_t499_m' + str(modes) + '.png',
           "auto",
           "auto",
-          "auto")
-    
+          "auto",
+          colorbar_label='u error')
+    #ROM error v
         plot_pcolormesh(\
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,1,1]-(vel_0_2D[:,:,1]+vel_rom_2D[:,:,1,0]),
-          data_folder + 'v_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t1_m' + str(modes) + '.png',
+          plot_folder+ 'v_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t1_m' + str(modes) + '.png',
           "auto",
           "auto",
-          "auto")
+          "auto",
+          colorbar_label='v error')
     
         plot_pcolormesh(\
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,1,100]-(vel_0_2D[:,:,1]+vel_rom_2D[:,:,1,99]),
-          data_folder + 'v_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t100_m' + str(modes) + '.png',
+          plot_folder+ 'v_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t100_m' + str(modes) + '.png',
           "auto",
           "auto",
-          "auto")
+          "auto",
+          colorbar_label='v error')
             
             
         plot_pcolormesh(\
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,1,-1]-(vel_0_2D[:,:,1]+vel_rom_2D[:,:,1,-1]),
-          data_folder + 'v_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t498_m' + str(modes) + '.png',
+          plot_folder+ 'v_vel_rom_error_p' + str(int(np.log10(penalty))) + '_t498_m' + str(modes) + '.png',
           "auto",
           "auto",
-          "auto")
-    
+          "auto",
+          colorbar_label='v error')
+    #POD error v
         plot_pcolormesh(\
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,1,1]-(vel_0_2D[:,:,1]+vel_pod_2D[:,:,1,1]),
-          data_folder + 'v_vel_pod_error_t1_m' + str(modes) + '.png',
+          plot_folder+ 'v_vel_pod_error_t1_m' + str(modes) + '.png',
           "auto",
           "auto",
-          "auto")
+          "auto",
+          colorbar_label='v error')
     
         plot_pcolormesh(\
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,1,100]-(vel_0_2D[:,:,1]+vel_pod_2D[:,:,1,100]),
-          data_folder + 'v_vel_pod_error_t100_m' + str(modes) + '.png',
+          plot_folder+ 'v_vel_pod_error_t100_m' + str(modes) + '.png',
           "auto",
           "auto",
-          "auto")
+          "auto",
+          colorbar_label='v error')
             
             
         plot_pcolormesh(\
           Xi_mesh,
           Eta_mesh,
           vel_true_2D[:,:,1,498]-(vel_0_2D[:,:,1]+vel_pod_2D[:,:,1,498]),
-          data_folder + 'v_vel_pod_error_t499_m' + str(modes) + '.png',
+          plot_folder+ 'v_vel_pod_error_t499_m' + str(modes) + '.png',
           "auto",
           "auto",
-          "auto")            
+          "auto",
+          colorbar_label='v error')   
+            
+        
+    
+    #Vorticity
+        plot_pcolormesh(\
+          Xi_mesh,
+          Eta_mesh,
+          vort[:,:,1],
+          plot_folder+ 'vort_p' + str(int(np.log10(penalty))) + '_t1_m' + str(modes) + '.png',
+          vmax = np.max(np.abs(vort[:,:,1])),
+          vmin = -np.max(np.abs(vort[:,:,1])),
+          cmap = "jet",
+          colorbar_label='vorticity')
+    
+        plot_pcolormesh(\
+          Xi_mesh,
+          Eta_mesh,
+          vort[:,:,100],
+          plot_folder+ 'vort_p' + str(int(np.log10(penalty))) + '_t100_m' + str(modes) + '.png',
+          vmax = np.max(np.abs(vort[:,:,100])),
+          vmin = -np.max(np.abs(vort[:,:,100])),
+          cmap = "jet",
+          colorbar_label='vorticity')
+            
+            
+        plot_pcolormesh(\
+          Xi_mesh,
+          Eta_mesh,
+          vort[:,:,-1],
+          plot_folder+ 'vort_p' + str(int(np.log10(penalty))) + '_t499_m' + str(modes) + '.png',
+          vmax = np.max(np.abs(vort[:,:,-1])),
+          vmin = -np.max(np.abs(vort[:,:,-1])),
+          cmap = "jet",
+          colorbar_label='vorticity')
+        
     
     ##-----------------------Compute Energy Error---------------------------------
     #Get Snapshots
