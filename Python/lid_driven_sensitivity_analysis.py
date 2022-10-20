@@ -30,9 +30,7 @@ def main(argv=None):
     
     #===============================Run Options================================
     #Fixed arguments
-    n_samp_morris = 40
     
-    l_morris = 1/40
     logging = 1
     
     decomp_method = 'svd'
@@ -43,6 +41,28 @@ def main(argv=None):
         print("x_delta: " + str(x_delta))
     else:
         x_delta = 1e-6
+        
+    if "n_samp_morris" in sys.argv:
+        index = sys.argv.index("n_samp_morris")
+        n_samp_morris = int(sys.argv[index+1])
+        print("n_samp_morris: " + str(n_samp_morris))
+    else : 
+        n_samp_morris = 40
+            
+        
+    if "l_morris" in sys.argv:
+        index  = sys.argv.index("l_morris")
+        l_morris = float(sys.arv[index+1])
+        print("l_morris: "+str(x_delta))
+    else:
+        l_morris = 1e-6
+    
+    if "Re" in sys.argv:
+        index = sys.argv.index("Re")
+        Re = int(sys.argv[index+1])
+        print("x_delta: " + str(x_delta))
+    else :
+        Re = 17000
         
     if "deriv_method" in sys.argv:
         index = sys.argv.index("deriv_method")
@@ -122,17 +142,17 @@ def main(argv=None):
         qoi_set = str(sys.argv[index+1])
         print("qoi_set: " + str(qoi_set))
     else:
-        qoi_set = "full velocity"  #integrated measures
+        qoi_set = "fullQOI"  #integrated measures
         
     
     
     
     #rom_matrices_filename="../../lid_driven_penalty/rom_matrices_s500_m" + str(modes) + ".npz"
     save_path = "../../lid_driven_data/morris_screening_s"+str(n_snapshot) + \
-        "m" + str(n_modes) + "_"
+        "m" + str(n_modes) + "_" 
     data_folder = "../../lid_driven_data/"
     weights_file = "weights_hr.mat"
-    velocity_file = "re17000_hr.mat"
+    velocity_file = "re" + str(Re) + "_hr.mat"
     #============================Set POIs and QOIs=============================
     poi_names = np.array(["Re", "boundary exponent mult", "penalty strength exp", \
                           "basis speed (TL)", "basis speed (BL)", "basis speed (BR)", \
@@ -150,13 +170,16 @@ def main(argv=None):
                           "basis extent (TL)", "basis extent (BL)", "basis extent (BR)", \
                           "basis extent (C1)", "basis extent (C2)", "basis extent (S1)", \
                           "basis extent (S2)"])
-    if qoi_set.lower() == "integrated measures":
+    if qoi_set.lower() == "intqoi":
         qoi_names = np.array(["energy", "vorticity", \
                               "local vorticity 0", "local vorticity 1", "local vorticity 2",\
                               "local vorticity 3", "local vorticity 4", "local vorticity 5", \
                               "local vorticity 6"])
-    elif qoi_set.lower() == "full velocity":
+    elif qoi_set.lower() == "fullqoi":
         qoi_names = np.array(["full velocity"])
+    else: 
+        raise Exception("Unrecognized QOI Names: " + str(qoi_names))
+           
     #poi_base = np.array([16000, 0, 1, 1, 0, -.75, .75, 1])
     # poi_base = np.array([20000, -1.5, 0,\
     #                      1, .5, .5, .1, .1, .1, .1, \
@@ -164,21 +187,34 @@ def main(argv=None):
     #                      -.75, -.75, .75, -.2, .2, .5, .75, \
     #                      .75, -.75, -.75, -.2, .2, .5, .75, 
     #                      1, 1.5, 1.5, 1, 1, 1, 1])
-    poi_base = np.array([17000, -1.5, -2,\
-                          .95, .5, .5, .1, .1, .1, .1, \
-                          0, 3*np.pi/4, np.pi/4, 0, 0, 0, 0,\
-                          -.75, -.75, .75, -.2, .2, .5, .75, \
-                          .75, -.75, -.75, -.2, .2, .5, .75, 
-                          1, 1.5, 1.5, 1, 1, 1, 1])
-    #initialize ranges with pm .25 of base values
+    if Re == 17000:
+        poi_base = np.array([17000, -1.5, -2,\
+                              .95, .5, .5, .1, .1, .1, .1, \
+                              0, 3*np.pi/4, np.pi/4, 0, 0, 0, 0,\
+                              -.75, -.75, .75, -.2, .2, .5, .75, \
+                              .75, -.75, -.75, -.2, .2, .5, .75, 
+                              1, 1.5, 1.5, 1, 1, 1, 1])
+    elif Re == 25000:
+        poi_base = np.array([25000, -1.5, -2,\
+                              .95, .5, .5, .1, .1, .1, .1, \
+                              0, 3*np.pi/4, np.pi/4, 0, 0, 0, 0,\
+                              -.75, -.75, .75, -.2, .2, .5, .75, \
+                              .75, -.75, -.75, -.2, .2, .5, .75, 
+                              1, 1.5, 1.5, 1, 1, 1, 1])
+    else : 
+        raise Exception("Invalid Reynolds number: " + str(Re))
+        #initialize ranges with pm .25 of base values
     poi_ranges = np.array([poi_base*.75, poi_base*1.25]).transpose()
-    #Set alternate Reynolds range
-    poi_ranges[0] = np.array([11000, 20000])
+        #Set alternate Reynolds range
+    if Re == 17000:
+        poi_ranges[0] = np.array([11000, 20000])
+    elif Re == 25000:
+        poi_ranges[0] = np.array([19000, 28000])
     poi_ranges[1] = np.array([-2, 0])
     poi_ranges[2] = np.array([-12, 0])
     #Set all axis angles to (0, pi) except those that are ovular by assumption (BL and BR)
     poi_ranges[10:17] = np.array([[0, np.pi], [np.pi/2, np.pi], [0, np.pi/2], [0, np.pi], [0, np.pi], [0, np.pi], [0, np.pi]])
-    
+
     center_locations = np.array([poi_base[17:24], poi_base[24:31]]).transpose()
     # poi_ranges = np.array([[12000, 18000], \
     #                        [-2, 0],\
@@ -244,14 +280,23 @@ def main(argv=None):
     
     if logging:
         print("Setting up model")
-    model = uq.Model(eval_fcn = eval_fcn,
-                      base_poi = poi_normalized,
-                      dist_type = "uniform",
-                      dist_param = poi_normalized_ranges,
-                      name_poi = poi_names,
-                      name_qoi = qoi_names
-                      )
-    #Set options
+    if qoi_set.lower() == "intqoi":
+        model = uq.Model(eval_fcn = eval_fcn,
+                          base_poi = poi_normalized,
+                          dist_type = "uniform",
+                          dist_param = poi_normalized_ranges,
+                          name_poi = poi_names,
+                          name_qoi = qoi_names
+                          )
+    else : 
+        model = uq.Model(eval_fcn = eval_fcn,
+                          base_poi = poi_normalized,
+                          dist_type = "uniform",
+                          dist_param = poi_normalized_ranges,
+                          name_poi = poi_names
+                          )
+    
+    #Determine which aspects of UQLibrary are run
     uqOptions = uq.Options()
     uqOptions.lsa.run=True
     uqOptions.lsa.run_lsa = False
@@ -272,21 +317,21 @@ def main(argv=None):
     uqOptions.display = True
     uqOptions.plot = True
     if run_morris and run_pss:
-        uqOptions.path = data_folder + "sensitivity/morris_ident_s" + str(n_snapshot) + "m" + \
+        uqOptions.path = data_folder + "sensitivity/morris_ident_Re" + str(Re) +"_s" + str(n_snapshot) + "m" + \
             str(n_modes) + "_l" + str(int(1/l_morris)) + "_tForward" + str(t_forward) +\
-            "_nSamp" + str(n_samp_morris) + "_tol" + str(int(np.log10(tolerance)*1000)/1000) + "_"
+            "_nSamp" + str(n_samp_morris) + "_tol" + str(int(np.log10(tolerance)*1000)/1000) + "_" + str(qoi_set) + "_"
     elif run_morris:
-        uqOptions.path = data_folder + "sensitivity/morris_s" + str(n_snapshot) + "m" + \
+        uqOptions.path = data_folder + "sensitivity/morris_Re" + str(Re) +"_s" + str(n_snapshot) + "m" + \
             str(n_modes) + "_l" + str(int(1/l_morris)) + "_tForward" + str(t_forward) +\
-            "_nSamp" + str(n_samp_morris) + "_"
+            "_nSamp" + str(n_samp_morris) + "_" + str(qoi_set) + "_"
     elif run_pss:
-        uqOptions.path = data_folder + "sensitivity/ident_s" + str(n_snapshot) + "m" + \
-            str(n_modes) + "_tForward" + str(t_forward) + "_tol" + str(int(np.log10(tolerance)*1000)/1000) + "_"
+        uqOptions.path = data_folder + "sensitivity/ident_Re" + str(Re) +"_s" + str(n_snapshot) + "m" + \
+            str(n_modes) + "_tForward" + str(t_forward) + "_tol" + str(int(np.log10(tolerance)*1000)/1000) + "_"+ str(qoi_set) + "_"
     elif test_reduction:
         uqOptions.path = data_folder + "sensitivity/"+str(algorithm).lower()+\
-            "_plots/reduction_s" + str(n_snapshot) + "m" + str(n_modes) + "_tForward"\
+            "_plots/reduction_Re" + str(Re) +"_s" + str(n_snapshot) + "m" + str(n_modes) + "_tForward"\
             + str(t_forward) + "_tol" +  str(int(np.log10(tolerance)*1000)/1000)\
-            + "_nsamp" + str(reduction_nsamp) +  "_"
+            + "_nsamp" + str(reduction_nsamp) +  "_" + str(qoi_set) + "_"
         
     # if logging>1:
     #     print("Base QOI Values: " + str(np.array([model.name_qoi, model.base_qoi]).transpose()))
@@ -306,112 +351,6 @@ def main(argv=None):
                                         uqOptions.path, tolerance, \
                                         logging = logging)
     
-'''
-    #Reshape Sensitivities
-    if QOI_type.lower()=='full data':
-        muStar3D=arr_conv.array_1D_to_3D(xi, eta, zeta, num_cell, results.gsa.muStar.squeeze())
-        sigma3D=np.sqrt(arr_conv.array_1D_to_3D(xi, eta, zeta, num_cell, results.gsa.sigma2.squeeze()))
-        base3D=arr_conv.array_1D_to_3D(xi, eta, zeta, num_cell, model.baseQOIs)
-    if QOI_type.lower()=='modal coeff':
-        muStar3D=results.gsa.muStar.reshape((options.pod["num_modes"], len(integration_times)))
-        sigma3D=np.sqrt(results.gsa.sigma2.reshape((options.pod["num_modes"], len(integration_times))))
-        base3D=model.baseQOIs.reshape((options.pod["num_modes"], len(integration_times)))
-    print('Raw Shape:' + str(results.gsa.muStar.shape))
-    print('Shifted Shape:' + str(muStar3D.shape))
-    print('Max Raw Results:' + str(np.max(results.gsa.muStar)))
-    #print('Local Sensitivities:' + str(np.max(results.lsa.jac)))
-    #print('Assessment Times:' + str(integration_times))
-    print('Max Sensitivitiy:' + str(np.max(muStar3D)))
-    print('Base Results: ' + str(np.max(base3D)) +', ' + str(np.mean(base3D)))
-    print('Base Results Raw: ' + str(np.max(model.baseQOIs)) +', ' + str(np.mean(model.baseQOIs)))
-    #Save sensitivities
-    #Save sensitivities
-    if hasattr(options.uq, 'save'):
-        if hasattr(options.uq.save, 'morris_mean_filename'):
-            np.save(options.uq.save.morris_mean_filename, muStar3D)
-        if hasattr(options.uq.save, 'morris_sigma_filename'):
-            np.save(options.uq.save.morris_sigma_filename, sigma3D)
-        if hasattr(options.rom,'save_filename'):
-            np.save(options.rom.save_filename, base3D)
-
-    #Plot Morris Indices
-    if (hasattr(options.uq,'plot'))&(QOI_type.lower()=='full data'):
-        plot_pcolormesh(
-            cell_centroid[:,:,0,0],
-            cell_centroid[:,:,0,1],
-            muStar3D[:, :, 0],
-            options.uq.plot.plot_prefix + 'reconst_mu' + str(num_modes)+'.eps',
-            sigma3D[:, :, 0],            
-            fig_size=(24,7),
-            font_size=23,
-            vmin="auto",
-            vmax="auto",
-            cmap="jet",
-            colorbar_label="$\mu^*_{Re}$",
-            xlabel="$x/L$",
-            ylabel="$y/L$",
-            title="Streamline Velocity Mean Sensitivity to Reynolds Number")
-        plot_pcolormesh(
-            cell_centroid[:, :, 0, 0],
-            cell_centroid[:, :, 0, 1],
-            sigma3D[:, :, 0],
-            options.uq.plot.plot_prefix + 'reconst_sigma' + str(num_modes)+'.eps',
-            fig_size=(24, 7),
-            font_size=23,
-            vmin="auto",
-            vmax="auto",
-            cmap="jet",
-            colorbar_label="$\sigma_{Re}$",
-            xlabel="$x/L$",
-            ylabel="$y/L$",
-            title="Streamline Velocity Sensitivity Standard Deviation for Reynolds Number")
-        plot_pcolormesh(
-            cell_centroid[:, :, 0, 0],
-            cell_centroid[:, :, 0, 1],
-            base3D[:, :, 0],
-            options.uq.plot.plot_prefix + 'mean_reduced' + str(num_modes)+'.eps',
-            fig_size=(24, 7),
-            font_size=23,
-            vmin="auto",
-            vmax="auto",
-            cmap="jet",
-            colorbar_label="$\sigma_{Re}$",
-            xlabel="$x/L$",
-            ylabel="$y/L$",
-            title="Streamline Velocity Sensitivity Standard Deviation for Reynolds Number")
-     
-    if (hasattr(options.uq,'plot'))&(QOI_type.lower()=='modal coeff'):
-        #plotted_modes=[0,1,4,9,18,24,32,48,49]
-        plotted_modes=[0,1,8,9,18,19,23,24]
-        for i in range(len(plotted_modes)):
-            mode=plotted_modes[i]
-            plt.figure(figsize=(3,2), dpi =150)
-            plt.plot(integration_times, muStar3D[mode,:])
-            plt.title("Mean Sensitivity")
-            plt.ylabel("Mode " + str(mode+1))
-            plt.xlabel("Time")
-            plt.savefig(options.uq.plot.plot_prefix + "Mode_" + str(mode+1) + "sens.eps", format="eps", bbox_inches='tight')
-            plt.savefig(options.uq.plot.plot_prefix + "Mode_" + str(mode+1) + "sens.pdf", bbox_inches='tight')
-            plt.savefig(options.uq.plot.plot_prefix + "Mode_" + str(mode+1) + "sens.png", bbox_inches='tight')
-            
-            plt.figure(figsize=(3,2), dpi =150)
-            plt.plot(integration_times, base3D[mode,:])
-            plt.title("Integrated Mode Value")
-            plt.ylabel("Mode " + str(mode+1))
-            plt.xlabel("Time")
-            plt.savefig(options.uq.plot.plot_prefix + "Mode_" + str(mode+1) + "base.eps", format="eps", bbox_inches='tight')
-            plt.savefig(options.uq.plot.plot_prefix + "Mode_" + str(mode+1) + "base.pdf", bbox_inches='tight')
-            plt.savefig(options.uq.plot.plot_prefix + "Mode_" + str(mode+1) + "base.png", bbox_inches='tight')
-             
-            plt.figure(figsize=(3,2), dpi =150)
-            plt.plot(integration_times, sigma3D[mode,:])
-            plt.title("Sensitivity Std")
-            plt.ylabel("Mode " + str(mode+1))
-            plt.xlabel("Time")
-            plt.savefig(options.uq.plot.plot_prefix + "Mode_" + str(mode+1) + "sigma.eps", format="eps", bbox_inches='tight')
-            plt.savefig(options.uq.plot.plot_prefix + "Mode_" + str(mode+1) + "sigma.pdf", bbox_inches='tight')
-            plt.savefig(options.uq.plot.plot_prefix + "Mode_" + str(mode+1) + "sigma.png", bbox_inches='tight')
-'''
 
 
 if __name__ == "__main__":
