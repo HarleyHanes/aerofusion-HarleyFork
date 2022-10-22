@@ -37,9 +37,14 @@ from aerofusion.pod import pod_modes
 #from aerofusion.numerics import curl_calc as curl_calc
 import mat73
 
-def main(velocity_1D_compact, u0_type, artificial_mean_reduced_velocity, weights_ND, modes):
+def main(velocity_1D_compact, u0_type, artificial_mean_reduced_velocity, weights_ND, \
+         modes, use_energy = False):
     #print("velocity shape: " + str(velocity_1D_compact.shape))
     num_snapshots = velocity_1D_compact.shape[1]
+    
+    if use_energy:
+        energy_threshold = modes
+        del modes
     
     
     #---------------------------------------Get Mean Velocity
@@ -48,6 +53,8 @@ def main(velocity_1D_compact, u0_type, artificial_mean_reduced_velocity, weights
         velocity_mean = artificial_mean_reduced_velocity
     elif u0_type.lower() == "mean":
         velocity_mean = pod_modes.Find_Mean(velocity_1D_compact)
+    elif u0_type.lower() == "mean_perturbed":
+        velocity_mean = pod_modes.Find_Mean(velocity_1D_compact)+artificial_mean_reduced_velocity
     else:
         raise(Exception("u0 type: " + str(u0_type) + " not recognized"))
         
@@ -56,6 +63,12 @@ def main(velocity_1D_compact, u0_type, artificial_mean_reduced_velocity, weights
     for i_snap in range(num_snapshots):
       mean_reduced_velocity[:,i_snap] = \
         velocity_1D_compact[:,i_snap] - velocity_mean[:]
+    
+    if use_energy:
+        modes = pod_modes.find_number_of_modes(\
+            mean_reduced_velocity,
+            weights_ND,
+            energy_threshold)
     
         
     (phi, modal_coeff, pod_lambda) = pod_modes.Find_Modes(\

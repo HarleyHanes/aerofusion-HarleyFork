@@ -42,6 +42,12 @@ def main(argv=None):
     else:
         x_delta = 1e-6
         
+    if "mean_perturbed" in sys.argv:
+        mean_type = "mean_perturbed"
+    else : 
+        #mean_type = "mean_perturbed"
+        mean_type = "artificial"
+        
     if "n_samp_morris" in sys.argv:
         index = sys.argv.index("n_samp_morris")
         n_samp_morris = int(sys.argv[index+1])
@@ -52,7 +58,7 @@ def main(argv=None):
         
     if "l_morris" in sys.argv:
         index  = sys.argv.index("l_morris")
-        l_morris = float(sys.arv[index+1])
+        l_morris = float(sys.argv[index+1])
         print("l_morris: "+str(x_delta))
     else:
         l_morris = 1e-6
@@ -89,8 +95,15 @@ def main(argv=None):
     if "n_modes" in sys.argv:
         index = sys.argv.index("n_modes")
         n_modes = int(sys.argv[index+1])
+        use_energy = False
         print("n_modes: " + str(n_modes))
+    elif "energy" in sys.argv:
+        index = sys.argv.index("energy")
+        n_modes = float(sys.argv[index+1])
+        use_energy = True
+        print("energy: " + str(n_modes))
     else:
+        use_energy = False
         n_modes = 100
         
     if "n_snapshot" in sys.argv:
@@ -188,12 +201,21 @@ def main(argv=None):
     #                      .75, -.75, -.75, -.2, .2, .5, .75, 
     #                      1, 1.5, 1.5, 1, 1, 1, 1])
     if Re == 17000:
-        poi_base = np.array([17000, -1.5, -2,\
-                              .95, .5, .5, .1, .1, .1, .1, \
-                              0, 3*np.pi/4, np.pi/4, 0, 0, 0, 0,\
-                              -.75, -.75, .75, -.2, .2, .5, .75, \
-                              .75, -.75, -.75, -.2, .2, .5, .75, 
-                              1, 1.5, 1.5, 1, 1, 1, 1])
+        if mean_type.lower() == "artificial":
+            poi_base = np.array([17000, -1.5, -2,\
+                                  .95, .5, .5, .1, .1, .1, .1, \
+                                  0, 3*np.pi/4, np.pi/4, 0, 0, 0, 0,\
+                                  -.75, -.75, .75, -.2, .2, .5, .75, \
+                                  .75, -.75, -.75, -.2, .2, .5, .75, 
+                                  1, 1.5, 1.5, 1, 1, 1, 1])
+        elif mean_type.lower() == "mean_perturbed":
+            poi_base = np.array([17000, -1.5, -2,\
+                                  0, 0, 0, 0, 0, 0, 0, \
+                                  0, 3*np.pi/4, np.pi/4, 0, 0, 0, 0,\
+                                  -.75, -.75, .75, -.2, .2, .5, .75, \
+                                  .75, -.75, -.75, -.2, .2, .5, .75, 
+                                  1, 1.5, 1.5, 1, 1, 1, 1])
+            
     elif Re == 25000:
         poi_base = np.array([25000, -1.5, -2,\
                               .95, .5, .5, .1, .1, .1, .1, \
@@ -212,6 +234,8 @@ def main(argv=None):
         poi_ranges[0] = np.array([19000, 28000])
     poi_ranges[1] = np.array([-2, 0])
     poi_ranges[2] = np.array([-12, 0])
+    if mean_type.lower() == "mean_perturbed":
+        poi_ranges[3:10,:] =np.array([-.1,.1])
     #Set all axis angles to (0, pi) except those that are ovular by assumption (BL and BR)
     poi_ranges[10:17] = np.array([[0, np.pi], [np.pi/2, np.pi], [0, np.pi/2], [0, np.pi], [0, np.pi], [0, np.pi], [0, np.pi]])
 
@@ -224,8 +248,11 @@ def main(argv=None):
     #                        [-.2, .2]+poi_base[5],\
     #                        [-.2, .2]+poi_base[6],\
     #                        [1,2]])
+    print("Ranges: " + str(poi_ranges))
     poi_normalized = normalize_pois(poi_base, poi_ranges)
+    print("Normalized: " + str(poi_normalized))
     poi_normalized_ranges = np.array([np.zeros(poi_base.shape), np.ones(poi_base.shape)])
+    print("Normalized Ranges: " + str(poi_normalized_ranges))
     #======================Load velocity and discretization data=====================
     if logging:
         print("Loading data")
@@ -276,7 +303,8 @@ def main(argv=None):
     eval_fcn = lambda poi_normalized : lid_driven_pod_rom(\
                     poi_normalized, poi_names, qoi_names, poi_ranges, n_modes,\
                     discretization, velocity_unreduced_1D_compact, integration_times,
-                    center_mat = center_locations, local_radius = .2)
+                    center_mat = center_locations, local_radius = .2, mean_type = mean_type,
+                    use_energy = use_energy)
     
     if logging:
         print("Setting up model")
@@ -321,9 +349,21 @@ def main(argv=None):
             str(n_modes) + "_l" + str(int(1/l_morris)) + "_tForward" + str(t_forward) +\
             "_nSamp" + str(n_samp_morris) + "_tol" + str(int(np.log10(tolerance)*1000)/1000) + "_" + str(qoi_set) + "_"
     elif run_morris:
-        uqOptions.path = data_folder + "sensitivity/morris_Re" + str(Re) +"_s" + str(n_snapshot) + "m" + \
-            str(n_modes) + "_l" + str(int(1/l_morris)) + "_tForward" + str(t_forward) +\
-            "_nSamp" + str(n_samp_morris) + "_" + str(qoi_set) + "_"
+        if mean_type.lower() == "artificial":
+            uqOptions.path = data_folder + "sensitivity/Re" + str(Re) +"_art_s" + str(n_snapshot) 
+        elif mean_type.lower()== "mean_perturbed":
+            uqOptions.path = data_folder + "sensitivity/Re" + str(Re) +"_pert_s" + str(n_snapshot)
+        else : 
+            raise Exception("Unrecgonzied mean type: " + mean_type)
+        if use_energy:
+            uqOptions.path += "e" + \
+                str(n_modes) + "_l" + str(int(1/l_morris)) + "_tForward" + str(t_forward) +\
+                "_nSamp" + str(n_samp_morris) + "_" + str(qoi_set) + "_"
+        else: 
+            uqOptions.path += "m" + \
+                str(n_modes) + "_l" + str(int(1/l_morris)) + "_tForward" + str(t_forward) +\
+                "_nSamp" + str(n_samp_morris) + "_" + str(qoi_set) + "_"
+            
     elif run_pss:
         uqOptions.path = data_folder + "sensitivity/ident_Re" + str(Re) +"_s" + str(n_snapshot) + "m" + \
             str(n_modes) + "_tForward" + str(t_forward) + "_tol" + str(int(np.log10(tolerance)*1000)/1000) + "_"+ str(qoi_set) + "_"

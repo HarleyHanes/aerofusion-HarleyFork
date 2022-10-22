@@ -16,8 +16,9 @@ from aerofusion.plot.plot_2D import plot_pcolormesh
 
 def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
          discretization, velocity_unreduced_1D_compact, integration_times,
-         center_mat = np.empty((0)), local_radius = .2, plot = False):
-    
+         center_mat = np.empty((0)), local_radius = .2, plot = False, 
+         mean_type = "artificial", use_energy = False):
+ 
     
     #=============================Load Discretization==========================
     Xi = discretization["Xi"]
@@ -157,11 +158,13 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
                                   basis_speed_vec, basis_orient_vec, basis_x_loc_vec,\
                                   basis_y_loc_vec, basis_extent_vec, Xi, Eta, \
                                   cell_centroid, plot = plot)
+            
                 (phi, modal_coeff, pod_lambda) = get_pod(velocity_unreduced_1D_compact, \
-                                                         "artificial", \
+                                                         mean_type, \
                                                          vel_0_1D_compact,\
                                                          weights_ND, \
-                                                         num_modes)
+                                                         num_modes,
+                                                         use_energy = use_energy)
                 
                 
         else:
@@ -173,7 +176,8 @@ def main(poi_normalized, poi_selector, qoi_selector, poi_bounds, num_modes,\
                                                      "artificial", \
                                                      vel_0_1D_compact,\
                                                      weights_ND, \
-                                                     num_modes)
+                                                     num_modes,
+                                                     use_energy = use_energy)
         
         #--------------------------ROM Matrix calculation----------------------
         #Convert 1D mean reduction to 3D for ROM matrix calculations

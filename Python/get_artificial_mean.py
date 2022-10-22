@@ -133,9 +133,9 @@ def main(basis_speed_vec, basis_orient_vec, basis_x_loc_vec, basis_y_loc_vec, \
             #Determine how much the voriticity would need to be scaled by so we
             # can rescale the velocity by the same amount since their magnitudes
             # follow scalar multiple relationship
-            prop_vel_change = max_speed_basis/ max_speed
+            prop_vel_change = max_speed / max_speed_basis
             #print("vel change: " + str(prop_vel_change))
-            basis_vel_2D = basis_vel_2D/ prop_vel_change
+            basis_vel_2D = basis_vel_2D * prop_vel_change
             
             velocity_2D += basis_vel_2D
             vorticity_analytic += vorticity_fcn(x0, y0, cell_centroid[:,:,0,0],\
