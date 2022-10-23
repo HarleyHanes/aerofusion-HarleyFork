@@ -12,15 +12,15 @@ import os
 def main(argv=None):
     
     use_energy = False
-    mean_type = 'pert'
+    mean_type = 'art'
     Re = 17000
     
     #tForward = '1.0'
     snapshots=150
     modes=100
     energy =0.99
-    delta = 1e-6
-    nSamp = 40
+    delta = .1
+    nSamp = 2
     qoi_type = "intQOI"
     
     data_folder = "../../lid_driven_data/sensitivity/"

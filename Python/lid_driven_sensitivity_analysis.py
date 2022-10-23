@@ -61,7 +61,7 @@ def main(argv=None):
         l_morris = float(sys.argv[index+1])
         print("l_morris: "+str(x_delta))
     else:
-        l_morris = 1e-6
+        l_morris = 1/40
     
     if "Re" in sys.argv:
         index = sys.argv.index("Re")
@@ -200,31 +200,25 @@ def main(argv=None):
     #                      -.75, -.75, .75, -.2, .2, .5, .75, \
     #                      .75, -.75, -.75, -.2, .2, .5, .75, 
     #                      1, 1.5, 1.5, 1, 1, 1, 1])
-    if Re == 17000:
-        if mean_type.lower() == "artificial":
-            poi_base = np.array([17000, -1.5, -2,\
-                                  .95, .5, .5, .1, .1, .1, .1, \
-                                  0, 3*np.pi/4, np.pi/4, 0, 0, 0, 0,\
-                                  -.75, -.75, .75, -.2, .2, .5, .75, \
-                                  .75, -.75, -.75, -.2, .2, .5, .75, 
-                                  1, 1.5, 1.5, 1, 1, 1, 1])
-        elif mean_type.lower() == "mean_perturbed":
-            poi_base = np.array([17000, -1.5, -2,\
-                                  0, 0, 0, 0, 0, 0, 0, \
-                                  0, 3*np.pi/4, np.pi/4, 0, 0, 0, 0,\
-                                  -.75, -.75, .75, -.2, .2, .5, .75, \
-                                  .75, -.75, -.75, -.2, .2, .5, .75, 
-                                  1, 1.5, 1.5, 1, 1, 1, 1])
-            
-    elif Re == 25000:
-        poi_base = np.array([25000, -1.5, -2,\
+
+    if mean_type.lower() == "artificial":
+        poi_base = np.array([17000, -1.5, -2,\
                               .95, .5, .5, .1, .1, .1, .1, \
                               0, 3*np.pi/4, np.pi/4, 0, 0, 0, 0,\
                               -.75, -.75, .75, -.2, .2, .5, .75, \
                               .75, -.75, -.75, -.2, .2, .5, .75, 
                               1, 1.5, 1.5, 1, 1, 1, 1])
-    else : 
-        raise Exception("Invalid Reynolds number: " + str(Re))
+    elif mean_type.lower() == "mean_perturbed":
+        poi_base = np.array([17000, -1.5, -2,\
+                              0, 0, 0, 0, 0, 0, 0, \
+                              0, 3*np.pi/4, np.pi/4, 0, 0, 0, 0,\
+                              -.75, -.75, .75, -.2, .2, .5, .75, \
+                              .75, -.75, -.75, -.2, .2, .5, .75, 
+                              1, 1.5, 1.5, 1, 1, 1, 1])
+            
+    if Re == 25000:
+        poi_base[0] = 25000
+        
         #initialize ranges with pm .25 of base values
     poi_ranges = np.array([poi_base*.75, poi_base*1.25]).transpose()
         #Set alternate Reynolds range
