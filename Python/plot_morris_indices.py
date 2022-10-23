@@ -19,7 +19,7 @@ def main(argv=None):
     snapshots=150
     modes=100
     energy =0.99
-    delta = .1
+    delta = 1/100000
     nSamp = 2
     qoi_type = "intQOI"
     
