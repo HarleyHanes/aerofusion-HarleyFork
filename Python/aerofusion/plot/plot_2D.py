@@ -61,7 +61,9 @@ def plot_pcolormesh(\
                cmap = options["cmap"],
                vmin = vmin,
                vmax = vmax)
-  fig.colorbar(im, label = options["colorbar_label"])
+  cbar = fig.colorbar(im, ax=ax)
+  cbar.set_label(options["colorbar_label"], rotation = 270, labelpad = options["font_size"]+4, fontsize = options["font_size"])
+ # fig.colorbar(im, label = options["colorbar_label"], rotation='180')
   ax.set_title(options["title"])
   ax.set_xlabel(options["xlabel"])
   ax.set_ylabel(options["ylabel"])
