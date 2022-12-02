@@ -12,9 +12,11 @@ import os
 def main(argv=None):
     
     use_energy = False
-    mean_type = 'pert'
-    Re = 25000
-    poi_set = 'full'
+    mean_type = 'art'
+    Re = 17000
+    poi_set = 'reduced'
+        
+    filetype = '.png'
     
     
     #tForward = '1.0'
@@ -25,7 +27,7 @@ def main(argv=None):
     nSamp = 40
     qoi_type = "intQOI"
     
-    data_folder = "../../lid_driven_data/sensitivity/"
+    data_folder = "../../lid_driven_data/pod_rom_sens/"
     data_set_prefix = "Re" + str(Re) +"_" + mean_type + "_s" + str(snapshots)
     #data_set_prefix = "s" + str(snapshots)
     if use_energy:
@@ -39,12 +41,10 @@ def main(argv=None):
     data_set_first_name = data_set_prefix+ "_tForward1.0" + data_set_suffix    
     data_set_second_name = data_set_prefix+ "_tForward2.0" + data_set_suffix
     
-    plot_folder = "../../Figures/LidDriven/morris/" + data_set_prefix + "_nSamp" +str(nSamp) + "/"
+    plot_folder = "../../figures/lid_driven_cavity/pod_rom_sens/" + data_set_prefix + "_nSamp" +str(nSamp) + "/"
     if not os.path.isdir(plot_folder):
         os.mkdir(plot_folder)
     plot_folder += qoi_type + "_"
-        
-    filetype = '.pdf'
     plt.rcParams['text.usetex'] = True
     
     #
@@ -62,7 +62,7 @@ def main(argv=None):
     morris_std = data_set_first["morris_std"]
     
     if poi_set == "full":
-        param_labels = np.array([r'$Re$', r'$\log_{10}(\alpha)$', r'$\log_{10}(\tau)$',\
+        param_labels = np.array([r'$Re$', r'$\log_{10}(\alpha)$', r'$\log_{10}(\kappa)$',\
                             r'$\bar{v}_1$', r'$\bar{v}_2$', r'$\bar{v}_3$', r'$\bar{v}_4$', r'$\bar{v}_5$', r'$\bar{v}_6$', r'$\bar{v}_7$',\
                             r'$\theta_1$',r'$\theta_2$',r'$\theta_3$',r'$\theta_4$',r'$\theta_5$',r'$\theta_6$',r'$\theta_7$',
                             r'$\xi_{x1}$',r'$\xi_{x2}$',r'$\xi_{x3}$',r'$\xi_{x4}$',r'$\xi_{x5}$',r'$\xi_{x6}$',r'$\xi_{x7}$',
@@ -73,11 +73,11 @@ def main(argv=None):
         figsize = (3.3,7)
         poi_ticks_breaks = np.array([3, 10, 17, 24, 31])-.5
     elif poi_set == "reduced":
-        param_labels = np.array([r'$Re$', r'$\log_{10}(\alpha)$', r'$\log_{10}(\tau)$',\
+        param_labels = np.array([r'$Re$', r'$\log_{10}(\alpha)$', r'$\log_{10}(\kappa)$',\
                             r'$\bar{v}_1$'])
         poi_tick_labels=np.arange(0,4)
         plot_folder += "reduced"
-        figsize = (3.3,2.7)
+        figsize = (3.3,2.4)
         morris_mean_abs = morris_mean_abs[0:4]
         morris_mean = morris_mean[0:4]
         morris_std = morris_std[0:4]
